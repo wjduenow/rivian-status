@@ -1,0 +1,6 @@
+# PlatformIO
+.pio/
+.vscode/
+
+# Secrets — WiFi + Rivian credentials live here, never committed (plan §1).
+include/secrets.h

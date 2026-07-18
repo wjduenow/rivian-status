@@ -1,7 +1,8 @@
 # 01 — rivian-status: a headless ESP32-S3 Rivian charge/range status light
 
-**Board:** a dedicated ESP32-S3 (no display), a few status LEDs (ideally one WS2812/NeoPixel
-or a small strip; discrete LEDs also fine).
+**Board:** **Seeed Studio XIAO ESP32-S3** (ESP32-S3R8, 8 MB PSRAM / 8 MB flash, USB-C, no
+display). **LEDs:** an **8-pixel WS2812/NeoPixel stick**, USB-powered from the board's `5V`
+pin — no external supply (see §7 for the pixel map, wiring, and power budget).
 **Goal:** an always-on desk/wall appliance that polls the owner's Rivian over WiFi and shows,
 via lights: is it plugged in, is it charging, roughly how full, **whether current range is
 below a configurable threshold**, and whether the link to Rivian is healthy. All setup —
@@ -32,6 +33,8 @@ captive portal, an embedded config web page, NVS-persisted settings, and Arduino
 | Telemetry transport | **Polling `getVehicleState` query**, not the WebSocket subscription (WS is heavier on an MCU for no benefit here). |
 | Poll cadence | **30 s**, exponential backoff on error capped at **900 s**. |
 | Primary alert | **current range `< X`**, where X is configurable in the web page. |
+| Board | **Seeed Studio XIAO ESP32-S3** (ESP32-S3R8, 8 MB PSRAM, USB-C). |
+| LED hardware | **8-pixel WS2812/NeoPixel stick**, one pixel per indicator (§7). Data on `D0`/GPIO1; powered from the `5V` (USB VBUS) pin; single-supply via a firmware brightness cap. |
 
 ### Open decisions (defer, noted where relevant)
 - **`distanceToEmpty` units (km vs miles) — UNCONFIRMED.** Verify against the real vehicle in
@@ -39,7 +42,6 @@ captive portal, an embedded config web page, NVS-persisted settings, and Arduino
 - Whether the low-range light is **charging-aware** (steady = low & not charging, pulse = low
   but charging) or dead simple (low is low). Data for both is free. Lean charging-aware; simple
   is fine for Phase 3.
-- Exact LED hardware (single RGB vs a few discrete). §7 assumes one WS2812 as the default.
 
 ---
 
@@ -200,18 +202,54 @@ lowRange = distanceToEmpty.value < rangeThresholdX   // X from NVS, set via web 
 
 ---
 
-## 7. LED mapping (first pass — assumes one WS2812)
+## 7. LEDs (locked: 8-pixel WS2812 stick on the XIAO ESP32-S3)
 
-| Indicator | Source field(s) | Suggested behavior |
-|---|---|---|
-| **Charging activity** | `chargerState` | off=idle · pulsing=charging · steady=complete · red-blink=fault |
-| **Plug state** | `chargePortState` | dim = plugged, off = unplugged (or fold into charging LED) |
-| **Fullness** | `batteryLevel` | color gradient red→amber→green, or N-LED bar at 25/50/75/100 |
-| **Low-range alert** | `distanceToEmpty` (+ opt. `chargerState`) | steady red = low & not charging · slow pulse = low but charging · off = above X |
-| **Link health** | poll success / auth state | green heartbeat = OK · amber = re-auth needed · red = offline |
+**Hardware (settled).** An **8-pixel WS2812/NeoPixel stick** (e.g. Adafruit NeoPixel Stick 8,
+or an equivalent bare stick — no onboard controller, since the XIAO *is* the controller). Eight
+pixels means **each indicator gets its own pixel** instead of multiplexing color+blink on one —
+clearer to read on a screenless appliance, and pixels 5–7 leave room for a 4-pixel fullness bar.
 
-With a single RGB LED, multiplex these as color + blink patterns and priority (fault/offline
-wins). With a small strip, give each its own pixel. Finalize once the LED hardware is picked.
+### Pixel map
+| Pixel | Indicator | Source field(s) | Behavior |
+|---|---|---|---|
+| **0** | **Link health** | poll success / auth state | green heartbeat = OK · amber = re-auth needed · red = offline |
+| **1** | **Charging activity** | `chargerState` | off = idle · pulsing = charging · steady = complete · red-blink = fault |
+| **2** | **Plug state** | `chargePortState` | dim white = plugged · off = unplugged |
+| **3** | **Low-range alert** | `distanceToEmpty` (+ `chargerState`) | steady red = low & not charging · slow pulse = low but charging · off = above X |
+| **4–7** | **Fullness bar** | `batteryLevel` | 4-pixel bar at 25/50/75/100 %, red→amber→green gradient |
+
+Priority still matters for shared cues (a fault or offline state should be unmistakable) — but
+with one pixel per role there's no multiplexing to arbitrate; the `leds` state machine (§8) just
+sets 8 colors per update.
+
+### Wiring (single-supply, USB-powered — no external PSU)
+```
+        XIAO ESP32-S3                      8-pixel WS2812 stick
+   ┌───────[ USB-C ]───────┐
+5V │ ●───────────────────────────────────► 5V   (VIN)
+GND│ ●───────────────────────────────────► GND
+3V3│ ●   (do NOT use — 700 mA reg,               ▲
+   │      shared with the ESP32)                 │ common ground
+D0 │ ●──[ ~330 Ω ]──────────────────────► DIN    │
+   │  ...                                         │
+   └───────────────────────────────────┘         │
+                                                  │
+   (optional) 470–1000 µF cap across the stick's 5V↔GND if pixel 0 flickers on power-up
+```
+- **DIN** ← `D0` (GPIO1) through a **~330 Ω** series resistor. Avoid strapping/USB pins
+  (GPIO0/3/19/20/45/46).
+- **5V** (VIN) ← the XIAO **`5V`** pin — the USB VBUS passthrough (top pin by the USB-C jack).
+  Present only when USB-powered; if the board is ever run from a LiPo, this pin is dead and the
+  strip loses power (not our case — this is a mains-USB appliance).
+- **3.3 V data into a 5 V strip** is marginally under WS2812 spec but reliable at this short
+  length; if pixel 0 ever glitches, add a **74AHCT125** shifter on DIN (fallback, not baseline).
+
+### Power budget (why single-supply is safe)
+8 px × ~60 mA at full white ≈ **480 mA** — that *would* exceed the safe USB headroom (a plain
+port gives ~500 mA and the ESP32's WiFi TX already spikes ~300–350 mA). The fix is a **firmware
+brightness cap** (`FastLED.setBrightness(~48/255)` default) plus status colors that are rarely
+white: real draw lands in the low tens of mA, comfortably inside budget. **The brightness cap is
+the load-bearing mitigation** — it's a hard default in the `leds` module, not a user setting.
 
 ---
 
@@ -225,7 +263,9 @@ Suggested module split (keeps the unofficial-API surface centralized):
 - `settings` — NVS: tokens (csrf/a-sess/u-sess), VIN, `dc-cid`, WiFi creds, `rangeThresholdX`,
   unit. **Enable NVS encryption** so tokens aren't at rest in cleartext (see §11).
 - `webserver` — SoftAP captive-portal WiFi join + the config/status/login page (§9).
-- `leds` — the state machine mapping `VehicleStatus` + link health → LED output.
+- `leds` — the state machine mapping `VehicleStatus` + link health → the 8-pixel map (§7).
+  Uses **`fastled/FastLED`** on `-DLED_DATA_PIN=1` (D0/GPIO1); enforces the brightness-cap
+  default (§7 power budget) as a hard floor, not a user knob.
 - `main` — boot: wifi (or SoftAP) → ensureAuth → fetchVin → poll loop (30 s) → drive LEDs;
   host `ArduinoOTA.handle()` in `loop()`.
 
@@ -282,7 +322,9 @@ surface. Acceptable for a hobby appliance on a trusted network; surface a short 
      the first pass.
    - Generate + persist the `dc-cid` (§3) so it's stable from the very first real call.
 2. **Poll loop + range check.** 30 s poll, backoff, compute `lowRange`. Print state over serial.
-3. **LEDs.** Wire the LED state machine to real status. Pick the LED hardware.
+3. **LEDs.** Wire the `leds` state machine to real status on the locked 8-pixel stick (§7):
+   FastLED on D0/GPIO1, the per-pixel map, and the brightness-cap default. Pin down the
+   charging-aware behavior once the Phase 1 `chargerState` enum values are in hand.
 4. **Web page.** Status + `/login` (two-phase, token storage, re-auth) + `/config` (threshold).
 5. **WiFi provisioning.** SoftAP captive portal fallback; drop `secrets.h` creds.
 6. **OTA + polish.** ArduinoOTA, mDNS name, link-health LED behavior, enclosure.

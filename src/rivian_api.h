@@ -15,9 +15,11 @@
 struct VehicleStatus {
   bool   valid           = false;
   float  batteryLevel    = NAN;    // charge %, 0-100 — API returns a FLOAT (e.g. 59.700001)
-  String chargerState;             // raw enum string (values TBD — Phase 1 records them)
-  String chargePortState;          // raw enum string (values TBD)
-  float  distanceToEmpty = NAN;    // range, raw value; units TBD (§6)
+  float  batteryLimit    = NAN;    // charge TARGET % (e.g. 70 or 100) — where charging stops
+  String chargerState;             // raw enum, e.g. "charging_active"
+  String chargePortState;          // raw enum, e.g. "open"
+  float  distanceToEmpty = NAN;    // range in KILOMETERS (§6); firmware converts to miles
+  int    timeToEndOfCharge = -1;   // minutes to reach batteryLimit (API int; -1 = unknown)
   String timeStamp;                // timeStamp of batteryLevel
 };
 

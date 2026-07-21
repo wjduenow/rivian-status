@@ -181,13 +181,18 @@ query getUserInfo { currentUser { vehicles { id vin name } } }
 ```graphql
 query GetVehicleState($vehicleID: String!) {   # pass the vehicle `id`, NOT the VIN (see above)
   vehicleState(id: $vehicleID) {
-    batteryLevel   { timeStamp value }   # charge % — FLOAT, e.g. 59.700001 (parse as float!)
-    chargerState   { timeStamp value }   # e.g. "charging_active" (Phase 1)
-    chargePortState{ timeStamp value }   # e.g. "open" (Phase 1)
-    distanceToEmpty{ timeStamp value }   # RANGE in KILOMETERS (§6); firmware converts to miles
+    batteryLevel     { timeStamp value } # charge % — FLOAT, e.g. 59.700001 (parse as float!)
+    batteryLimit     { timeStamp value } # charge TARGET % (e.g. 70 or 100) — where charging stops
+    chargerState     { timeStamp value } # e.g. "charging_active" (Phase 1)
+    chargePortState  { timeStamp value } # e.g. "open" (Phase 1)
+    distanceToEmpty  { timeStamp value } # RANGE in KILOMETERS (§6); firmware converts to miles
+    timeToEndOfCharge{ timeStamp value } # minutes to reach batteryLimit (int)
   }
 }
 ```
+`batteryLimit` reflects the owner's charge cap — e.g. `70` when set for battery longevity, `100`
+for a full charge (confirmed live 2026-07-21: limit 70 while SoC 61%). "Charge complete" is best
+read as `batteryLevel ≈ batteryLimit`, not `chargerState` alone.
 Response is a few hundred bytes → parse with ArduinoJson in a small buffer. **Do not** request
 the default ~100-field property set.
 
@@ -227,10 +232,10 @@ clearer to read on a screenless appliance, and pixels 5–7 leave room for a 4-p
 | Pixel | Indicator | Source field(s) | Behavior |
 |---|---|---|---|
 | **0** | **Link health** | poll success / auth state | green heartbeat = OK · amber = re-auth needed · red = offline |
-| **1** | **Charging activity** | `chargerState` | off = idle · pulsing = charging · steady = complete · red-blink = fault |
+| **1** | **Charging activity** | `chargerState` + `batteryLevel`≈`batteryLimit` | off = idle · pulsing = charging · steady = at target · red-blink = fault |
 | **2** | **Plug state** | `chargePortState` | dim white = plugged · off = unplugged |
 | **3** | **Low-range alert** | `distanceToEmpty` (+ `chargerState`) | steady red = low & not charging · slow pulse = low but charging · off = above X |
-| **4–7** | **Fullness bar** | `batteryLevel` | 4-pixel bar at 25/50/75/100 %, red→amber→green gradient |
+| **4–7** | **Fullness bar + target** | `batteryLevel`, `batteryLimit` | 4-pixel bar (25/50/75/100 %) lit to current SoC, red→amber→green; the pixel at the **`batteryLimit`** mark tinted differently so a 70% cap vs a 100% charge is visible at a glance |
 
 Priority still matters for shared cues (a fault or offline state should be unmistakable) — but
 with one pixel per role there's no multiplexing to arbitrate; the `leds` state machine (§8) just

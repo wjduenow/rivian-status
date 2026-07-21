@@ -193,6 +193,8 @@ void setup() {
   // -------- Phase 1 deliverables (plan §10) --------
   rule("PHASE 1 DELIVERABLES — record these");
   Serial.printf("batteryLevel     : %.1f %%\n", st.batteryLevel);
+  Serial.printf("batteryLimit     : %.0f %%   (charge target — where charging stops)\n", st.batteryLimit);
+  Serial.printf("timeToEndOfCharge: %d min\n", st.timeToEndOfCharge);
   Serial.printf("chargerState     : \"%s\"   <-- record this enum value\n", st.chargerState.c_str());
   Serial.printf("chargePortState  : \"%s\"   <-- record this enum value\n", st.chargePortState.c_str());
   Serial.printf("distanceToEmpty  : %.1f  (units UNCONFIRMED)\n", st.distanceToEmpty);
@@ -260,9 +262,13 @@ void loop() {
     String cs = st.chargerState; cs.toLowerCase();
     bool charging  = cs.indexOf("charg") >= 0 && cs.indexOf("not") < 0;
 
-    Serial.printf("[poll] soc=%.1f%%  range=%.0f mi (%.0f km)  charger=\"%s\"  port=\"%s\"  ts=%s\n",
-                  st.batteryLevel, rangeMiles, st.distanceToEmpty,
-                  st.chargerState.c_str(), st.chargePortState.c_str(), st.timeStamp.c_str());
+    // "charge complete" ≈ current has reached the target (more reliable than chargerState alone).
+    bool atTarget = !isnan(st.batteryLevel) && !isnan(st.batteryLimit) &&
+                    st.batteryLevel >= st.batteryLimit - 0.5f;
+    Serial.printf("[poll] soc=%.1f%% / limit %.0f%%  range=%.0f mi (%.0f km)  charger=\"%s\"  port=\"%s\"  eta=%dmin%s\n",
+                  st.batteryLevel, st.batteryLimit, rangeMiles, st.distanceToEmpty,
+                  st.chargerState.c_str(), st.chargePortState.c_str(), st.timeToEndOfCharge,
+                  atTarget ? "  [at target]" : "");
     if (lowRange) {
       Serial.printf("  >>> LOW RANGE (%.0f mi < %d mi)%s\n", rangeMiles, (int)RANGE_THRESHOLD_X,
                     charging ? " — but charging (would pulse)" : " — not charging (would be steady red)");

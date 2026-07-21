@@ -296,9 +296,11 @@ static bool pollWith(const String& id, VehicleStatus& out) {
   req["query"] =
       "query GetVehicleState($vehicleID: String!) { vehicleState(id: $vehicleID) { "
       "batteryLevel { timeStamp value } "
+      "batteryLimit { timeStamp value } "
       "chargerState { timeStamp value } "
       "chargePortState { timeStamp value } "
-      "distanceToEmpty { timeStamp value } } }";
+      "distanceToEmpty { timeStamp value } "
+      "timeToEndOfCharge { timeStamp value } } }";
   String body; serializeJson(req, body);
 
   const char* headers[] = { "A-Sess", s_aSess.c_str(), "U-Sess", s_uSess.c_str() };
@@ -312,11 +314,13 @@ static bool pollWith(const String& id, VehicleStatus& out) {
   JsonObject vs = doc["data"]["vehicleState"];
   if (vs.isNull()) { s_lastError = "getVehicleState: null vehicleState"; return false; }
 
-  out.batteryLevel    = vs["batteryLevel"]["value"]    | (float)NAN;  // float in the API (e.g. 59.7)
-  out.chargerState    = vs["chargerState"]["value"]    | "";
-  out.chargePortState = vs["chargePortState"]["value"] | "";
-  out.distanceToEmpty = vs["distanceToEmpty"]["value"] | NAN;
-  out.timeStamp       = vs["batteryLevel"]["timeStamp"] | "";
+  out.batteryLevel      = vs["batteryLevel"]["value"]      | (float)NAN;  // float in the API (e.g. 59.7)
+  out.batteryLimit      = vs["batteryLimit"]["value"]      | (float)NAN;  // charge target %
+  out.chargerState      = vs["chargerState"]["value"]      | "";
+  out.chargePortState   = vs["chargePortState"]["value"]   | "";
+  out.distanceToEmpty   = vs["distanceToEmpty"]["value"]   | NAN;
+  out.timeToEndOfCharge = vs["timeToEndOfCharge"]["value"] | -1;          // minutes (int in API)
+  out.timeStamp         = vs["batteryLevel"]["timeStamp"]  | "";
   out.valid = true;
   return true;
 }

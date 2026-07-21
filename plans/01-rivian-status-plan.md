@@ -349,8 +349,12 @@ surface. Acceptable for a hobby appliance on a trusted network; surface a short 
 
    *(LEDs moved to the end — the 8-pixel stick hasn't arrived; the software phases below don't
    need it, so do them first and finish with the light.)*
-3. **Web page.** Status + `/login` (two-phase, token storage, re-auth) + `/config` (threshold in
-   miles). Uses the persisted-`u-sess` model already built.
+3. **✅ DONE — Web page.** Single `WebServer:80` + a FreeRTOS poll task (mutex-guarded TLS +
+   snapshot, per §8). `/` live status (auto-refresh, link-health pill), `/login` (two-phase
+   email/password→OTP, password never stored), `/config` (threshold miles + device name → NVS),
+   mDNS `<name>.local`. Verified live from a browser: status renders real telemetry, config
+   persists. (Browser login→OTP path uses the same `rivian_api` calls proven in Phase 1; not
+   re-exercised live to conserve OTPs. `/wifi` provisioning is Phase 4.)
 4. **WiFi provisioning.** SoftAP captive portal fallback; drop `secrets.h` creds.
 5. **OTA + polish.** ArduinoOTA, mDNS name, enclosure. (Link-health behavior lands with the LEDs.)
 6. **LEDs (last — needs the 8-pixel stick).** Wire the `leds` FreeRTOS state machine to real

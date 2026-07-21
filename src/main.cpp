@@ -14,6 +14,8 @@
 #include <math.h>
 
 #include "rivian_api.h"
+#include "settings.h"
+#include "webserver.h"
 
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -295,6 +297,30 @@ void loop() {
   }
 }
 
+// ===========================================================================
+// PHASE 3 — browser UI (status + login + config) with a background poll task
+// ===========================================================================
+#elif defined(PHASE3_WEBAPP)
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("\n\n### rivian-status — Phase 3 web app ###");
+
+  bringUpNetwork();                        // WiFi + NTP + RivianApi::begin (+ SEED_USESS)
+  Settings::begin();
+  webAppBegin();                           // mDNS + HTTP server + poll task (reuses u-sess)
+
+  Serial.printf("Web UI: http://%s/  (or http://%s.local/)\n",
+                WiFi.localIP().toString().c_str(), Settings::deviceName().c_str());
+  Serial.printf("Persisted session: %s — %s\n",
+                RivianApi::hasSession() ? "yes" : "no",
+                RivianApi::hasSession() ? "polling starts automatically"
+                                        : "open /login in a browser to authenticate");
+}
+
+void loop() { webAppLoop(); delay(2); }
+
 #else
-#error "Define PHASE1_SMOKE_TEST or PHASE2_POLL_LOOP (select env:phase1 or env:phase2)."
+#error "Define PHASE1_SMOKE_TEST, PHASE2_POLL_LOOP, or PHASE3_WEBAPP (select env:phase1/2/3)."
 #endif

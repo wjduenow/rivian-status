@@ -337,6 +337,7 @@ bool RivianApi::pollState(VehicleStatus& out) {
 String RivianApi::vin()         { return s_vin; }
 String RivianApi::vehicleId()   { return s_vehicleId; }
 String RivianApi::vehicleName() { return s_vehicleName; }
+String RivianApi::userSession() { return s_uSess; }
 String RivianApi::dcCid()       { return s_dcCid; }
 String RivianApi::lastError()   { return s_lastError; }
 String RivianApi::lastRaw()     { return s_lastRaw; }

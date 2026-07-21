@@ -59,6 +59,7 @@ bool pollState(VehicleStatus& out);
 String vin();
 String vehicleId();
 String vehicleName();
+String userSession();   // current u-sess (for dev: copy into SEED_USESS after a fresh login)
 String dcCid();
 String lastError();   // human-readable last failure
 String lastRaw();     // raw body of the last HTTP response (for smoke-test printing)

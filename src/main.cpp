@@ -161,6 +161,12 @@ static bool authenticate(bool verbose) {
   Serial.printf("Vehicle: name=\"%s\"  vin=%s  id=%s\n",
                 RivianApi::vehicleName().c_str(), RivianApi::vin().c_str(),
                 RivianApi::vehicleId().c_str());
+
+  // We just did a full login (this path only runs when session-reuse failed / no stored token).
+  // The u-sess is now persisted to NVS, but print it too so you can refresh SEED_USESS in
+  // secrets.h — then even an NVS wipe won't force another OTP until this token expires.
+  Serial.println("\n>>> Fresh login complete. To keep re-images OTP-free, set in include/secrets.h:");
+  Serial.printf(">>>   #define SEED_USESS \"%s\"\n", RivianApi::userSession().c_str());
   return true;
 }
 

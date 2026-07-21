@@ -41,8 +41,8 @@ captive portal, an embedded config web page, NVS-persisted settings, and Arduino
   in KILOMETERS; the US app displays miles** (391 km API ≈ 244 mi app). Firmware converts km→mi;
   the web-page threshold X is entered in **miles** (§6).
 - Whether the low-range light is **charging-aware** (steady = low & not charging, pulse = low
-  but charging) or dead simple (low is low). Data for both is free. Lean charging-aware; simple
-  is fine for Phase 3.
+  but charging) or dead simple (low is low). Data for both is free. Lean charging-aware; decide
+  in the LED phase (§10 phase 6).
 
 ---
 
@@ -333,9 +333,9 @@ surface. Acceptable for a hobby appliance on a trusted network; surface a short 
 
 ## 10. Phasing
 
-1. **Auth smoke-test (headless, serial).** Hard-code creds in `secrets.h`; run
-   CSRF→Login→(OTP)→getUserInfo→getVehicleState once; print the raw response. *Proves the
-   CloudFront/TLS/header path works against the real account.* Phase 1 deliverables:
+1. **✅ DONE (2026-07-21) — Auth smoke-test (headless, serial).** Hard-code creds in `secrets.h`;
+   run CSRF→Login→(OTP)→getUserInfo→getVehicleState once; print the raw response. *Proved the
+   CloudFront/TLS/header path works against the real account.* Phase 1 deliverables (all met):
    - **Confirm `distanceToEmpty` units** (km vs miles) against the app display.
    - **Record the raw enum string values** of `chargerState` and `chargePortState` across
      states (unplugged · plugged-idle · charging · complete · fault) — §7's LED state machine
@@ -344,13 +344,19 @@ surface. Acceptable for a hobby appliance on a trusted network; surface a short 
      step (Rivian texts the code at login); build that in, or note Phase 1 assumes MFA-off for
      the first pass.
    - Generate + persist the `dc-cid` (§3) so it's stable from the very first real call.
-2. **Poll loop + range check.** 30 s poll, backoff, compute `lowRange`. Print state over serial.
-3. **LEDs.** Wire the `leds` state machine to real status on the locked 8-pixel stick (§7):
-   FastLED on D0/GPIO1, the per-pixel map, and the brightness-cap default. Pin down the
-   charging-aware behavior once the Phase 1 `chargerState` enum values are in hand.
-4. **Web page.** Status + `/login` (two-phase, token storage, re-auth) + `/config` (threshold).
-5. **WiFi provisioning.** SoftAP captive portal fallback; drop `secrets.h` creds.
-6. **OTA + polish.** ArduinoOTA, mDNS name, link-health LED behavior, enclosure.
+2. **✅ DONE — Poll loop + range check.** 30 s poll, `min(30·2^n,900)` backoff, `lowRange`
+   (km→mi). Added `batteryLimit`/`timeToEndOfCharge`. Serial-only. Session persisted/reused.
+
+   *(LEDs moved to the end — the 8-pixel stick hasn't arrived; the software phases below don't
+   need it, so do them first and finish with the light.)*
+3. **Web page.** Status + `/login` (two-phase, token storage, re-auth) + `/config` (threshold in
+   miles). Uses the persisted-`u-sess` model already built.
+4. **WiFi provisioning.** SoftAP captive portal fallback; drop `secrets.h` creds.
+5. **OTA + polish.** ArduinoOTA, mDNS name, enclosure. (Link-health behavior lands with the LEDs.)
+6. **LEDs (last — needs the 8-pixel stick).** Wire the `leds` FreeRTOS state machine to real
+   status on the locked stick (§7): FastLED on D0/GPIO1, the per-pixel map, brightness-cap
+   default, and the fullness bar + `batteryLimit` mark. Finish the `chargerState`/`chargePortState`
+   enum set (idle/unplugged/complete/fault) in this phase; `charging_active`/`open` captured.
 
 ---
 

@@ -284,7 +284,8 @@ Suggested module split (keeps the unofficial-API surface centralized):
   returns a small `VehicleStatus { batteryLevel, chargerState, plugged, rangeRaw, ts }`.
 - `net_wifi` — ✅ built. Hostname (= device name, set before STA transition), NVS-or-`secrets.h`
   creds, runtime `apply()`, and the SoftAP captive portal. Lifted from `sonos-nest/src/core/net/`.
-- `net_ota` — (Phase 5) ArduinoOTA; lift from `sonos-nest`.
+- `net_ota` — ✅ built. ArduinoOTA as `<device name>.local`, optional `OTA_PASSWORD`; `otaHandle()`
+  serviced in `loop()`. Verified with a live wireless update.
 - `settings` — ✅ built (NVS `cfg`): `rangeThresholdMiles`, `deviceName` (sanitized hostname),
   WiFi creds. Tokens/`dc-cid` live in `rivian_api`'s own NVS. **Enable NVS encryption** so tokens
   + WiFi pass aren't at rest in cleartext (see §11).
@@ -365,7 +366,11 @@ surface. Acceptable for a hobby appliance on a trusted network; surface a short 
    (open AP `<name>-setup`, wildcard DNS, scan-list join page) that also sets the device name,
    then reboots into STA. Creds persist to NVS. (Portal path compile-verified + mirrors the proven
    sonos-nest code; not exercised live since valid creds are present — would need a creds wipe.)
-5. **OTA + polish.** ArduinoOTA, mDNS name, enclosure. (Link-health behavior lands with the LEDs.)
+5. **✅ DONE — OTA.** `net_ota` (ArduinoOTA) advertises as `<device name>.local`, optional
+   `OTA_PASSWORD` from `secrets.h`. `phase3-ota` env does espota uploads
+   (`OTA_PASSWORD=<pw> pio run -e phase3-ota -t upload`). **Verified live: a full firmware update
+   over WiFi (authenticated) succeeded and the device rebooted into it — no USB.** (Enclosure is
+   physical, still to do; link-health behavior lands with the LEDs.)
 6. **LEDs (last — needs the 8-pixel stick).** Wire the `leds` FreeRTOS state machine to real
    status on the locked stick (§7): FastLED on D0/GPIO1, the per-pixel map, brightness-cap
    default, and the fullness bar + `batteryLimit` mark. Finish the `chargerState`/`chargePortState`

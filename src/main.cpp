@@ -17,6 +17,7 @@
 #include "settings.h"
 #include "webserver.h"
 #include "net_wifi.h"
+#include "net_ota.h"
 
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -313,6 +314,7 @@ void setup() {
 
   bringUpNetwork(/*provision=*/true);      // Settings + WiFi (portal fallback) + NTP + RivianApi
   webAppBegin();                           // mDNS + HTTP server + poll task (reuses u-sess)
+  otaBegin();                              // ArduinoOTA as <device name>.local
 
   Serial.printf("Web UI: http://%s/  (or http://%s.local/)\n",
                 WiFi.localIP().toString().c_str(), Settings::deviceName().c_str());
@@ -322,7 +324,11 @@ void setup() {
                                         : "open /login in a browser to authenticate");
 }
 
-void loop() { webAppLoop(); delay(2); }
+void loop() {
+  webAppLoop();
+  otaHandle();                             // service wireless firmware pushes
+  delay(2);
+}
 
 #else
 #error "Define PHASE1_SMOKE_TEST, PHASE2_POLL_LOOP, or PHASE3_WEBAPP (select env:phase1/2/3)."

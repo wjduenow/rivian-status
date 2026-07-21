@@ -276,7 +276,7 @@ static bool pollWith(const String& id, VehicleStatus& out) {
   JsonObject vs = doc["data"]["vehicleState"];
   if (vs.isNull()) { s_lastError = "getVehicleState: null vehicleState"; return false; }
 
-  out.batteryLevel    = vs["batteryLevel"]["value"]    | -1;
+  out.batteryLevel    = vs["batteryLevel"]["value"]    | (float)NAN;  // float in the API (e.g. 59.7)
   out.chargerState    = vs["chargerState"]["value"]    | "";
   out.chargePortState = vs["chargePortState"]["value"] | "";
   out.distanceToEmpty = vs["distanceToEmpty"]["value"] | NAN;
@@ -287,14 +287,14 @@ static bool pollWith(const String& id, VehicleStatus& out) {
 
 bool RivianApi::pollState(VehicleStatus& out) {
   s_lastError = "";
-  // The protocol dig says vehicleState(id:) takes the VIN, but some clients pass the vehicle id.
-  // Try VIN first; on failure fall back to id and record which worked (Phase 1 data, plan §10).
+  // Phase 1 finding (2026-07-21, live vehicle): vehicleState(id:) takes the vehicle *id*
+  // (e.g. "01-244090061"), NOT the VIN — the VIN returns NOT_FOUND. Use id; fall back to VIN
+  // only if id is somehow empty.
+  if (!s_vehicleId.isEmpty() && pollWith(s_vehicleId, out)) return true;
+  String idErr = s_lastError;
   if (pollWith(s_vin, out)) return true;
-  String vinErr = s_lastError;
-  if (!s_vehicleId.isEmpty() && s_vehicleId != s_vin && pollWith(s_vehicleId, out)) {
-    s_lastError = String("(note: VIN key failed [") + vinErr + "], vehicle id key worked)";
-    return true;
-  }
+  if (!idErr.isEmpty())
+    s_lastError = idErr + " (VIN key also failed: " + s_lastError + ")";
   return false;
 }
 

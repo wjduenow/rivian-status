@@ -37,8 +37,9 @@ captive portal, an embedded config web page, NVS-persisted settings, and Arduino
 | LED hardware | **8-pixel WS2812/NeoPixel stick**, one pixel per indicator (§7). Data on `D0`/GPIO1; powered from the `5V` (USB VBUS) pin; single-supply via a firmware brightness cap. |
 
 ### Open decisions (defer, noted where relevant)
-- **`distanceToEmpty` units (km vs miles) — UNCONFIRMED.** Verify against the real vehicle in
-  Phase 2 before trusting the threshold (§6).
+- ~~`distanceToEmpty` units~~ — **CONFIRMED 2026-07-21 (Phase 1, live vehicle): the API field is
+  in KILOMETERS; the US app displays miles** (391 km API ≈ 244 mi app). Firmware converts km→mi;
+  the web-page threshold X is entered in **miles** (§6).
 - Whether the low-range light is **charging-aware** (steady = low & not charging, pulse = low
   but charging) or dead simple (low is low). Data for both is free. Lean charging-aware; simple
   is fine for Phase 3.
@@ -159,19 +160,23 @@ Our token model:
 
 ## 5. Telemetry (polling `getVehicleState`)
 
-**Once at boot:** `getUserInfo` → `data.currentUser.vehicles[].{id, vin, name}` → cache the VIN.
+**Once at boot:** `getUserInfo` → `data.currentUser.vehicles[].{id, vin, name}` → cache **both the
+`id` and the VIN**.
 ```graphql
 query getUserInfo { currentUser { vehicles { id vin name } } }
 ```
+> **Phase 1 correction (2026-07-21, live):** `vehicleState(id:)` takes the vehicle **`id`**
+> (e.g. `01-244090061`), **NOT the VIN** — passing the VIN returns `NOT_FOUND`. (`name` can be
+> `null`.) The protocol dig guessed "VIN"; reality is the `id`. Firmware keys on `id`.
 
 **Every 30 s:** request only the fields we use (each returns `{ timeStamp value }`):
 ```graphql
-query GetVehicleState($vehicleID: String!) {
+query GetVehicleState($vehicleID: String!) {   # pass the vehicle `id`, NOT the VIN (see above)
   vehicleState(id: $vehicleID) {
-    batteryLevel   { timeStamp value }   # charge %  (0–100)
-    chargerState   { timeStamp value }   # charging engagement / state
-    chargePortState{ timeStamp value }   # plug/port door state
-    distanceToEmpty{ timeStamp value }   # RANGE — the low-range alert input (units TBD, §6)
+    batteryLevel   { timeStamp value }   # charge % — FLOAT, e.g. 59.700001 (parse as float!)
+    chargerState   { timeStamp value }   # e.g. "charging_active" (Phase 1)
+    chargePortState{ timeStamp value }   # e.g. "open" (Phase 1)
+    distanceToEmpty{ timeStamp value }   # RANGE in KILOMETERS (§6); firmware converts to miles
   }
 }
 ```
@@ -186,14 +191,15 @@ number). On any error, exponential backoff `min(30 * 2^errCount, 900)` seconds. 
 ## 6. Low-range alert (the primary feature)
 
 ```
-lowRange = distanceToEmpty.value < rangeThresholdX   // X from NVS, set via web page
+rangeMiles = distanceToEmpty.value / 1.60934        // API value is KM (confirmed §1); convert
+lowRange   = rangeMiles < rangeThresholdX           // X in MILES, from NVS, set via web page
 ```
-- **X is configurable** on the web page (a number field), persisted to NVS — same idea as
-  sonos-button's configurable volume. No reflash to change it.
-- **⚠️ Units unconfirmed (km vs miles).** The Rivian US app shows miles, but the raw API field
-  may be km. **Phase 2 smoke-test task:** read the live `distanceToEmpty` value and compare to
-  what the app displays; label the web-page field with the confirmed unit; set X accordingly.
-  Don't ship the threshold until this is verified.
+- **X is configurable** on the web page (a number field, **in miles**), persisted to NVS — same
+  idea as sonos-button's configurable volume. No reflash to change it.
+- **✅ Units confirmed (Phase 1, 2026-07-21):** the raw `distanceToEmpty` field is **kilometers**;
+  the US app shows **miles** (live check: 391 km API ≈ 244 mi app). Firmware divides by 1.60934
+  and the web page labels/accepts the threshold in miles. (If an owner ever wants km, that's a
+  display-unit toggle later — the raw field stays km.)
 - **Range, not SoC %, is the right signal** — it already bakes in temperature/load/conditions,
   so "range < X" answers "can I make my trip." (SoC % is still shown for the fullness LED.)
 - **Note:** the API also exposes a vehicle-reported `rangeThreshold` field alongside
@@ -221,6 +227,10 @@ clearer to read on a screenless appliance, and pixels 5–7 leave room for a 4-p
 Priority still matters for shared cues (a fault or offline state should be unmistakable) — but
 with one pixel per role there's no multiplexing to arbitrate; the `leds` state machine (§8) just
 sets 8 colors per update.
+
+**Observed enum values (Phase 1, growing):** `chargerState = "charging_active"`,
+`chargePortState = "open"`. Still needed to complete the map: the idle/unplugged/complete/fault
+values — capture them by re-running phase1 in those states (plan §10 note).
 
 ### Wiring (single-supply, USB-powered — no external PSU)
 ```

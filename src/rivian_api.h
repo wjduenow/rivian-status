@@ -14,7 +14,7 @@
 // (km vs miles) — confirming them is a Phase 1 deliverable (plan §6).
 struct VehicleStatus {
   bool   valid           = false;
-  int    batteryLevel    = -1;     // charge %, 0-100
+  float  batteryLevel    = NAN;    // charge %, 0-100 — API returns a FLOAT (e.g. 59.700001)
   String chargerState;             // raw enum string (values TBD — Phase 1 records them)
   String chargePortState;          // raw enum string (values TBD)
   float  distanceToEmpty = NAN;    // range, raw value; units TBD (§6)

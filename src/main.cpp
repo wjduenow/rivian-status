@@ -161,7 +161,7 @@ void setup() {
 
   // -------- Phase 1 deliverables (plan §10) --------
   rule("PHASE 1 DELIVERABLES — record these");
-  Serial.printf("batteryLevel     : %d %%\n", st.batteryLevel);
+  Serial.printf("batteryLevel     : %.1f %%\n", st.batteryLevel);
   Serial.printf("chargerState     : \"%s\"   <-- record this enum value\n", st.chargerState.c_str());
   Serial.printf("chargePortState  : \"%s\"   <-- record this enum value\n", st.chargePortState.c_str());
   Serial.printf("distanceToEmpty  : %.1f  (units UNCONFIRMED)\n", st.distanceToEmpty);
@@ -222,15 +222,18 @@ void loop() {
     // lowRange = distanceToEmpty < X (plan §6). Charging-aware annotation is free (§7): when
     // low AND charging, the alert would "pulse" rather than sit steady. chargerState enum
     // values are TBD (Phase 1), so we match on a substring heuristic for now.
-    bool lowRange  = !isnan(st.distanceToEmpty) && st.distanceToEmpty < RANGE_THRESHOLD_X;
+    // distanceToEmpty is KILOMETERS (Phase 1 confirmed); convert to miles for the US threshold.
+    float rangeMiles = isnan(st.distanceToEmpty) ? NAN : st.distanceToEmpty / 1.60934f;
+    bool lowRange  = !isnan(rangeMiles) && rangeMiles < RANGE_THRESHOLD_X;
+    // chargerState=="charging_active" seen in Phase 1; keep a substring match for other states.
     String cs = st.chargerState; cs.toLowerCase();
     bool charging  = cs.indexOf("charg") >= 0 && cs.indexOf("not") < 0;
 
-    Serial.printf("[poll] soc=%d%%  range=%.1f  charger=\"%s\"  port=\"%s\"  ts=%s\n",
-                  st.batteryLevel, st.distanceToEmpty,
+    Serial.printf("[poll] soc=%.1f%%  range=%.0f mi (%.0f km)  charger=\"%s\"  port=\"%s\"  ts=%s\n",
+                  st.batteryLevel, rangeMiles, st.distanceToEmpty,
                   st.chargerState.c_str(), st.chargePortState.c_str(), st.timeStamp.c_str());
     if (lowRange) {
-      Serial.printf("  >>> LOW RANGE (%.1f < %d)%s\n", st.distanceToEmpty, (int)RANGE_THRESHOLD_X,
+      Serial.printf("  >>> LOW RANGE (%.0f mi < %d mi)%s\n", rangeMiles, (int)RANGE_THRESHOLD_X,
                     charging ? " — but charging (would pulse)" : " — not charging (would be steady red)");
     }
     sleepSeconds(POLL_INTERVAL_S);

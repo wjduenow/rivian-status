@@ -16,12 +16,15 @@
 #include "rivian_api.h"
 #include "settings.h"
 #include "webserver.h"
+#include "net_wifi.h"
 
 #if __has_include("secrets.h")
 #include "secrets.h"
 #endif
 
-#if !defined(WIFI_SSID) || !defined(RIVIAN_EMAIL)
+// Phases 1 & 2 hard-code creds in secrets.h. Phase 3 provisions WiFi via the portal and logs in
+// via the browser, so it doesn't require the macros.
+#if (defined(PHASE1_SMOKE_TEST) || defined(PHASE2_POLL_LOOP)) && (!defined(WIFI_SSID) || !defined(RIVIAN_EMAIL))
 #error "Copy include/secrets.h.example to include/secrets.h and fill in your credentials."
 #endif
 
@@ -44,23 +47,14 @@ static void halt(const char* why) {
   for (;;) delay(1000);
 }
 
+// Connect via the Net module (hostname = device name, NVS creds then secrets.h). Returns false
+// on timeout so the caller decides: halt (dev serial tests) or raise the portal (the appliance).
 static bool connectWifi() {
   rule("WiFi");
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname(DEVICE_HOSTNAME);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  Serial.printf("Connecting to \"%s\"", WIFI_SSID);
-  uint32_t start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
-    delay(300);
-    Serial.print(".");
-  }
-  Serial.println();
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("FAILED — check WIFI_SSID/WIFI_PASS in secrets.h");
-    return false;
-  }
-  Serial.printf("Connected. IP=%s  RSSI=%d dBm\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+  Serial.printf("Connecting as \"%s\"...\n", Net::hostname().c_str());
+  if (!Net::connect(20000)) return false;
+  Serial.printf("Connected. IP=%s  RSSI=%d dBm  host=%s\n",
+                Net::ip().toString().c_str(), WiFi.RSSI(), WiFi.getHostname());
   return true;
 }
 
@@ -100,9 +94,19 @@ static String readSerialLine(const char* prompt) {
   return line;
 }
 
-// WiFi + NTP + API init. Halts on no-WiFi (nothing works without it).
-static void bringUpNetwork() {
-  if (!connectWifi()) halt("no WiFi");
+// Settings + WiFi + NTP + API init. `provision`: on WiFi failure, raise the SoftAP captive portal
+// (the appliance) instead of halting (dev serial tests). Settings load first — the DHCP hostname
+// is the device name and must be known before WiFi associates.
+static void bringUpNetwork(bool provision) {
+  Settings::begin();
+  if (!connectWifi()) {
+    if (provision) {
+      Serial.println("No WiFi — raising setup portal (join \"<name>-setup\").");
+      Net::runPortal();                // blocks until joined; reboots on success
+    } else {
+      halt("no WiFi (check creds / antenna)");
+    }
+  }
   syncTime();                          // continue even if it fails, to surface the TLS error
   RivianApi::begin();
   Serial.printf("dc-cid (persistent): %s\n", RivianApi::dcCid().c_str());
@@ -182,7 +186,7 @@ void setup() {
   delay(2000);                         // let USB-CDC enumerate before the first prints
   Serial.println("\n\n### rivian-status — Phase 1 auth smoke-test ###");
 
-  bringUpNetwork();
+  bringUpNetwork(/*provision=*/false);
   if (!authenticate(/*verbose=*/true)) halt("auth failed");
 
   rule("getVehicleState");
@@ -244,7 +248,7 @@ void setup() {
   Serial.printf("Poll cadence %us, backoff cap %us, rangeThresholdX=%d miles (API km -> mi)\n",
                 POLL_INTERVAL_S, BACKOFF_CAP_S, (int)RANGE_THRESHOLD_X);
 
-  bringUpNetwork();
+  bringUpNetwork(/*provision=*/false);
   if (!authenticate(/*verbose=*/false)) halt("initial auth failed");
   Serial.println("\nAuthenticated. Entering poll loop.");
 }
@@ -307,8 +311,7 @@ void setup() {
   delay(2000);
   Serial.println("\n\n### rivian-status — Phase 3 web app ###");
 
-  bringUpNetwork();                        // WiFi + NTP + RivianApi::begin (+ SEED_USESS)
-  Settings::begin();
+  bringUpNetwork(/*provision=*/true);      // Settings + WiFi (portal fallback) + NTP + RivianApi
   webAppBegin();                           // mDNS + HTTP server + poll task (reuses u-sess)
 
   Serial.printf("Web UI: http://%s/  (or http://%s.local/)\n",

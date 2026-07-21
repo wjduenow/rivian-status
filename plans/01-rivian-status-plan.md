@@ -282,9 +282,12 @@ Suggested module split (keeps the unofficial-API surface centralized):
 - `rivian_api.{h,cpp}` — **the only file that knows Rivian's URLs, headers, and GraphQL
   strings.** Exposes `login()`, `completeOtp()`, `ensureAuth()`, `fetchVin()`, `pollState()`;
   returns a small `VehicleStatus { batteryLevel, chargerState, plugged, rangeRaw, ts }`.
-- `net_wifi` / `net_ota` — lift the patterns from `sonos-nest/src/core/net/`.
-- `settings` — NVS: tokens (csrf/a-sess/u-sess), VIN, `dc-cid`, WiFi creds, `rangeThresholdX`,
-  unit. **Enable NVS encryption** so tokens aren't at rest in cleartext (see §11).
+- `net_wifi` — ✅ built. Hostname (= device name, set before STA transition), NVS-or-`secrets.h`
+  creds, runtime `apply()`, and the SoftAP captive portal. Lifted from `sonos-nest/src/core/net/`.
+- `net_ota` — (Phase 5) ArduinoOTA; lift from `sonos-nest`.
+- `settings` — ✅ built (NVS `cfg`): `rangeThresholdMiles`, `deviceName` (sanitized hostname),
+  WiFi creds. Tokens/`dc-cid` live in `rivian_api`'s own NVS. **Enable NVS encryption** so tokens
+  + WiFi pass aren't at rest in cleartext (see §11).
 - `webserver` — SoftAP captive-portal WiFi join + the config/status/login page (§9).
 - `leds` — the state machine mapping `VehicleStatus` + link health → the 8-pixel map (§7).
   Uses **`fastled/FastLED`** on `-DLED_DATA_PIN=1` (D0/GPIO1); enforces the brightness-cap
@@ -354,8 +357,14 @@ surface. Acceptable for a hobby appliance on a trusted network; surface a short 
    email/password→OTP, password never stored), `/config` (threshold miles + device name → NVS),
    mDNS `<name>.local`. Verified live from a browser: status renders real telemetry, config
    persists. (Browser login→OTP path uses the same `rivian_api` calls proven in Phase 1; not
-   re-exercised live to conserve OTPs. `/wifi` provisioning is Phase 4.)
-4. **WiFi provisioning.** SoftAP captive portal fallback; drop `secrets.h` creds.
+   re-exercised live to conserve OTPs.) **Device name = DHCP hostname + mDNS + AP name** (single
+   source, `Settings`); `setHostname` set before the STA transition (arduino-esp32 quirk, per
+   sonos-nest); a rename **reboots** so all three update together — verified live.
+4. **✅ DONE — WiFi provisioning.** `net_wifi` module (borrowed from sonos-nest wifi.cpp +
+   portal.cpp): tries NVS creds then `secrets.h`; on failure raises a **SoftAP captive portal**
+   (open AP `<name>-setup`, wildcard DNS, scan-list join page) that also sets the device name,
+   then reboots into STA. Creds persist to NVS. (Portal path compile-verified + mirrors the proven
+   sonos-nest code; not exercised live since valid creds are present — would need a creds wipe.)
 5. **OTA + polish.** ArduinoOTA, mDNS name, enclosure. (Link-health behavior lands with the LEDs.)
 6. **LEDs (last — needs the 8-pixel stick).** Wire the `leds` FreeRTOS state machine to real
    status on the locked stick (§7): FastLED on D0/GPIO1, the per-pixel map, brightness-cap

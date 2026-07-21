@@ -228,8 +228,27 @@ static void handleConfigGet(const String& msg = "") {
 }
 static void handleConfigPost() {
   if (s_server.hasArg("threshold")) Settings::setRangeThresholdMiles(s_server.arg("threshold").toInt());
-  if (s_server.hasArg("name"))      Settings::setDeviceName(s_server.arg("name"));
-  handleConfigGet("Saved.");
+
+  // A device-name change means a new DHCP hostname + mDNS + AP name. Those only re-register on a
+  // fresh STA association, so — like sonos-nest — save and reboot so all three come up together.
+  bool renamed = false;
+  if (s_server.hasArg("name")) {
+    String want = Settings::sanitizeHostname(s_server.arg("name"));
+    if (want.length() && want != Settings::deviceName()) { Settings::setDeviceName(s_server.arg("name")); renamed = true; }
+  }
+
+  if (renamed) {
+    String n = Settings::deviceName();
+    String b = pageHead("Renamed", false);
+    b += "<div class=card><h1>Renamed to " + n + "</h1><p>Rebooting so the network name updates. "
+         "Reconnect in a few seconds at <a href='http://" + n + ".local/'>http://" + n + ".local/</a>.</p></div>"
+         + pageFoot();
+    s_server.send(200, "text/html", b);
+    delay(1200);
+    ESP.restart();
+  } else {
+    handleConfigGet("Saved.");
+  }
 }
 
 // --- Lifecycle ------------------------------------------------------------------------------

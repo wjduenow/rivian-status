@@ -82,6 +82,38 @@ static void loadOrCreateDcCid() {
   prefs.end();
 }
 
+// --- Session persistence ---------------------------------------------------
+// NOTE: stored unencrypted for now; enable NVS encryption before shipping (plan §11). u-sess is
+// a live credential granting account read access.
+static void loadSession() {
+  Preferences prefs;
+  prefs.begin("rivian", true);           // read-only
+  s_uSess = prefs.getString("u_sess", "");
+  prefs.end();
+}
+
+static void persistSession() {
+  Preferences prefs;
+  prefs.begin("rivian", false);
+  prefs.putString("u_sess", s_uSess);
+  prefs.end();
+}
+
+bool RivianApi::hasSession() { return !s_uSess.isEmpty(); }
+
+void RivianApi::clearSession() {
+  s_uSess = "";
+  Preferences prefs;
+  prefs.begin("rivian", false);
+  prefs.remove("u_sess");
+  prefs.end();
+}
+
+void RivianApi::seedSession(const String& uSess) {
+  s_uSess = uSess;
+  persistSession();
+}
+
 // ---------------------------------------------------------------------------
 // HTTP plumbing. One persistent WiFiClientSecure; HTTPClient rides on it.
 // `extraHeaders` are appended after the base set (name/value pairs, count = n*2).
@@ -135,6 +167,7 @@ static bool captureGqlError(JsonDocument& doc) {
 // ---------------------------------------------------------------------------
 void RivianApi::begin() {
   loadOrCreateDcCid();
+  loadSession();                           // reuse a persisted u-sess if we have one (plan §4)
   s_tls.setCACert(AMAZON_ROOT_CA_1);       // pin the root (plan §3)
 }
 
@@ -185,7 +218,9 @@ RivianApi::LoginResult RivianApi::login(const String& email, const String& passw
   JsonObject login = doc["data"]["login"];
   if (login["userSessionToken"].is<const char*>()) {
     s_uSess = login["userSessionToken"] | "";
-    return s_uSess.isEmpty() ? LOGIN_ERROR : LOGIN_OK;
+    if (s_uSess.isEmpty()) return LOGIN_ERROR;
+    persistSession();                      // save for reuse across resets/reflashes (plan §4)
+    return LOGIN_OK;
   }
   if (login["otpToken"].is<const char*>()) {
     // MFA path: stash otpToken for completeOtp() (reuses the same csrf + a-sess). Rivian texts
@@ -222,6 +257,7 @@ bool RivianApi::completeOtp(const String& email, const String& otpCode) {
 
   s_uSess = doc["data"]["loginWithOTP"]["userSessionToken"] | "";
   if (s_uSess.isEmpty()) { s_lastError = "OTP: no userSessionToken"; return false; }
+  persistSession();                        // save for reuse across resets/reflashes (plan §4)
   return true;
 }
 

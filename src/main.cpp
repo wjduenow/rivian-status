@@ -104,11 +104,36 @@ static void bringUpNetwork() {
   syncTime();                          // continue even if it fails, to surface the TLS error
   RivianApi::begin();
   Serial.printf("dc-cid (persistent): %s\n", RivianApi::dcCid().c_str());
+#ifdef SEED_USESS
+  // One-time bootstrap: inject an out-of-band u-sess (from secrets.h, gitignored) if NVS has none,
+  // so the reuse path can be exercised without a fresh login/OTP. Remove once NVS is seeded.
+  if (!RivianApi::hasSession()) {
+    RivianApi::seedSession(SEED_USESS);
+    Serial.println("[seed] injected u-sess from build define");
+  }
+#endif
+  Serial.printf("persisted session present: %s\n", RivianApi::hasSession() ? "yes" : "no");
 }
 
 // Full auth handshake: CSRF -> Login -> (OTP over serial if MFA) -> getUserInfo. Shared by both
 // phases. `verbose` dumps raw responses (Phase 1 wants them). Returns true once the VIN is cached.
 static bool authenticate(bool verbose) {
+  // Fast path (plan §4): if a u-sess was persisted from a prior run, reuse it — mint a fresh CSRF
+  // (which yields a new a-sess) and prove the session with getUserInfo. No login, no MFA/OTP.
+  // This is what makes resets/reflashes painless once you've authenticated once.
+  if (RivianApi::hasSession()) {
+    rule("Auth: reuse persisted u-sess (no login/OTP)");
+    if (RivianApi::createCsrf() && RivianApi::fetchVin()) {
+      Serial.printf("Session reuse OK. Vehicle: name=\"%s\"  vin=%s  id=%s\n",
+                    RivianApi::vehicleName().c_str(), RivianApi::vin().c_str(),
+                    RivianApi::vehicleId().c_str());
+      return true;
+    }
+    Serial.printf("Persisted u-sess invalid (%s) — clearing, falling back to full login.\n",
+                  RivianApi::lastError().c_str());
+    RivianApi::clearSession();
+  }
+
   rule("Auth: CreateCSRFToken");
   if (!RivianApi::createCsrf()) { printRaw(); Serial.printf("CSRF failed: %s\n", RivianApi::lastError().c_str()); return false; }
   if (verbose) printRaw();

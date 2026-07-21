@@ -26,9 +26,19 @@ namespace RivianApi {
 // login() return codes.
 enum LoginResult { LOGIN_OK = 0, LOGIN_MFA_REQUIRED = 1, LOGIN_ERROR = -1 };
 
-// One-time init: load-or-generate the persistent dc-cid, pin the Amazon Root CA. Call after WiFi
-// is up and system time is set (TLS cert-validity checks need a real clock).
+// One-time init: load-or-generate the persistent dc-cid, load any persisted u-sess, pin the
+// Amazon Root CA. Call after WiFi is up and system time is set (TLS needs a real clock).
 void begin();
+
+// --- Session persistence (plan §4 reactive model) --------------------------------------------
+// After a successful login/OTP the u-sess is auto-saved to NVS. On the next boot, begin() loads
+// it, so a reset/reflash can reuse the session (fresh CSRF + stored u-sess) instead of doing the
+// whole email/password/MFA dance again. If the stored u-sess has expired, reads fail and the
+// caller falls back to a full login, then clears the dead token.
+bool hasSession();     // true if a persisted (or freshly obtained) u-sess is loaded
+void clearSession();   // wipe the stored u-sess (call when it's confirmed dead)
+void seedSession(const String& uSess);  // inject a u-sess obtained out-of-band and persist it
+                                         // (restore-from-backup / test bootstrap)
 
 // Step 1: CreateCSRFToken. Populates csrf-token + a-sess. No auth headers.
 bool createCsrf();

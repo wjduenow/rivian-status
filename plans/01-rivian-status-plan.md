@@ -142,10 +142,18 @@ mutation LoginWithOTP($email: String!, $otpCode: String!, $otpToken: String!) {
 The maintained client captures `refreshToken` but never sends it. On an **expired-token
 error**, it simply **re-runs `CreateCSRFToken` (reusing the still-valid `U-Sess`)** and retries.
 Our token model:
-1. Persist `Csrf-Token`, `A-Sess`, `U-Sess`, VIN in NVS.
-2. On an auth error → mint a new CSRF token, retry. **Silent, unattended.**
-3. Only if that also fails → surface "re-login needed" (link-health LED + web page), owner
-   re-enters password/OTP once.
+1. Persist **`U-Sess`** (+ VIN) in NVS. `Csrf-Token`/`A-Sess` are **re-minted each boot** by
+   CreateCSRFToken, so they don't need persisting — only `U-Sess` does.
+2. On boot, **reuse the persisted `U-Sess`**: mint a fresh CSRF/A-Sess, then call a read to
+   verify. If it works, skip login/OTP entirely.
+3. On an auth error → mint a new CSRF token, retry. **Silent, unattended.**
+4. Only if that also fails → clear the dead `U-Sess`, surface "re-login needed" (link-health LED
+   + web page), owner re-enters password/OTP once.
+
+> **✅ Implemented & verified (Phase 1, 2026-07-21):** `rivian_api` persists `U-Sess` to NVS on
+> login/OTP success and reuses it on the next boot. Confirmed live — a board reset reused a
+> ~40-min-old `U-Sess` via fresh CSRF and pulled vehicle state with **no login and no OTP**. This
+> is what keeps MFA off the critical path for a screenless appliance.
 
 ### Header matrix
 | Call | Csrf-Token | A-Sess | U-Sess |

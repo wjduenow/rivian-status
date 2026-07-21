@@ -146,7 +146,7 @@ static bool authenticate(bool verbose) {
 
   if (lr == RivianApi::LOGIN_MFA_REQUIRED) {
     rule("Auth: LoginWithOTP (MFA)");
-    Serial.println("MFA enabled — Rivian just texted a code to your phone.");
+    Serial.println("MFA enabled — Rivian just sent a code to your email.");
     String otp = readSerialLine("Enter OTP code, then press Enter: ");
     if (!RivianApi::completeOtp(RIVIAN_EMAIL, otp)) { printRaw(); Serial.printf("OTP failed: %s\n", RivianApi::lastError().c_str()); return false; }
     if (verbose) printRaw();
@@ -237,7 +237,7 @@ void setup() {
   Serial.begin(115200);
   delay(2000);
   Serial.println("\n\n### rivian-status — Phase 2 poll loop ###");
-  Serial.printf("Poll cadence %us, backoff cap %us, rangeThresholdX=%d (raw units — see §6)\n",
+  Serial.printf("Poll cadence %us, backoff cap %us, rangeThresholdX=%d miles (API km -> mi)\n",
                 POLL_INTERVAL_S, BACKOFF_CAP_S, (int)RANGE_THRESHOLD_X);
 
   bringUpNetwork();

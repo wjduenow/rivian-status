@@ -4,3 +4,7 @@
 
 # Secrets — WiFi + Rivian credentials live here, never committed (plan §1).
 include/secrets.h
+
+# hardware/ — Python CAD toolchain byproducts (STLs + previews ARE committed)
+__pycache__/
+*.pyc

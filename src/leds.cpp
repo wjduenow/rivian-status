@@ -95,7 +95,7 @@ static void render() {
 
 void ledsBegin() {
   FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(leds, LED_COUNT);
-  FastLED.setBrightness(LED_BRIGHTNESS);
+  FastLED.setBrightness(Settings::ledBrightness());   // runtime cap from NVS (/config)
   fill_solid(leds, LED_COUNT, CRGB::Black);
   FastLED.show();
 }
@@ -105,6 +105,7 @@ void ledsLoop() {
   uint32_t now = millis();
   if (now - last < 20) return;   // ~50 Hz
   last = now;
+  FastLED.setBrightness(Settings::ledBrightness());   // pick up /config changes without a reboot
   render();
   FastLED.show();
 }

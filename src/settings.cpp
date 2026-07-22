@@ -4,10 +4,14 @@
 #ifndef DEVICE_HOSTNAME
 #define DEVICE_HOSTNAME "rivian-status"
 #endif
+#ifndef LED_BRIGHTNESS
+#define LED_BRIGHTNESS 40                  // default cap; matches the phase3 build flag
+#endif
 
 static const char* NS = "cfg";
 
 static int    s_thresholdMiles = 50;
+static int    s_ledBrightness  = LED_BRIGHTNESS;
 static String s_deviceName     = DEVICE_HOSTNAME;
 
 void Settings::begin() {
@@ -15,6 +19,7 @@ void Settings::begin() {
   p.begin(NS, false);                      // read-write: creates the namespace on first boot
                                            // (a read-only open would log nvs_open NOT_FOUND)
   s_thresholdMiles = p.getInt("thresh_mi", 50);
+  s_ledBrightness  = p.getInt("led_bri", LED_BRIGHTNESS);
   s_deviceName     = p.getString("dev_name", DEVICE_HOSTNAME);
   p.end();
 }
@@ -28,6 +33,18 @@ void Settings::setRangeThresholdMiles(int miles) {
   Preferences p;
   p.begin(NS, false);
   p.putInt("thresh_mi", miles);
+  p.end();
+}
+
+int Settings::ledBrightness() { return s_ledBrightness; }
+
+void Settings::setLedBrightness(int b) {
+  if (b < 1)   b = 1;
+  if (b > 255) b = 255;
+  s_ledBrightness = b;
+  Preferences p;
+  p.begin(NS, false);
+  p.putInt("led_bri", b);
   p.end();
 }
 

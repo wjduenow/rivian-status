@@ -12,6 +12,9 @@ void begin();                              // open NVS namespace, load defaults
 int  rangeThresholdMiles();                // low-range alert threshold X, in miles (default 50)
 void setRangeThresholdMiles(int miles);    // clamped to [1, 500], persisted
 
+int  ledBrightness();                      // LED strip brightness 0-255 (default LED_BRIGHTNESS=40)
+void setLedBrightness(int b);              // clamped to [1, 255], persisted
+
 String deviceName();                       // DHCP hostname + mDNS + UI title (default DEVICE_HOSTNAME)
 void   setDeviceName(const String& name);  // sanitized to DNS-safe, then persisted
 

@@ -106,7 +106,12 @@ static const char* CSS =
   "input{padding:.5rem;border-radius:6px;border:1px solid #444;background:#222;color:#eee;width:100%}"
   "button{padding:.6rem 1rem;border:0;border-radius:6px;background:#3a7;color:#022;font-weight:600;"
   "cursor:pointer;margin-top:.6rem}.pill{padding:.15rem .5rem;border-radius:999px;font-size:.85rem}"
-  ".ok{background:#153}.warn{background:#530}.err{background:#500}nav a{margin-right:1rem}";
+  ".ok{background:#153}.warn{background:#530}.err{background:#500}nav a{margin-right:1rem}"
+  ".meter{display:flex;gap:4px;margin:.3rem 0}.seg{flex:1;height:20px;border-radius:4px}"
+  ".seg.o{background:#2a2a2a}.seg.g{background:#2ecc40}.seg.r{background:#ff4136}"
+  ".pulse{animation:pl 1s ease-in-out infinite}.flash{animation:fl .6s steps(1,end) infinite}"
+  "@keyframes pl{0%,100%{opacity:.3}50%{opacity:1}}@keyframes fl{0%,50%{opacity:1}50.01%,100%{opacity:.15}}"
+  "output{color:#9a9a9a;margin-left:.5rem}";
 
 static String pageHead(const String& title, bool autorefresh) {
   String h = "<!doctype html><html><head><meta charset=utf-8>"
@@ -120,6 +125,37 @@ static String pageFoot() { return "</body></html>"; }
 
 static String row(const String& k, const String& v) {
   return "<div class=row><span class=k>" + k + "</span><span>" + v + "</span></div>";
+}
+
+// An 8-segment preview of what the LED strip is showing (mirrors leds.cpp render()).
+static String meterHtml(const Snap& s, int threshMiles) {
+  const int N = 8;
+  String seg[N];
+  for (int i = 0; i < N; i++) seg[i] = "o";
+
+  if (s.link != LINK_OK || !s.everOk) {
+    seg[0] = "r pulse";                                  // link down: pixel 0 pulses red
+  } else {
+    const VehicleStatus& v = s.vs;
+    float target = (isnan(v.batteryLimit) || v.batteryLimit <= 1.0f) ? 100.0f : v.batteryLimit;
+    float soc    = isnan(v.batteryLevel) ? 0.0f : v.batteryLevel;
+    float f      = constrain(soc / target, 0.0f, 1.0f);
+    int   n      = (int)lroundf(f * N);
+    if (soc < target - 0.5f && n >= N) n = N - 1;
+    float mi     = isnan(v.distanceToEmpty) ? NAN : v.distanceToEmpty / 1.60934f;
+
+    if (v.chargerState == "charging_active") {           // charging: leading pixel pulses red
+      seg[constrain(n - 1, 0, N - 1)] = "r pulse";
+    } else if (!isnan(mi) && mi < threshMiles) {         // low range: all flash red
+      for (int i = 0; i < N; i++) seg[i] = "r flash";
+    } else {                                             // meter: green filled + red empty
+      for (int i = 0; i < N; i++) seg[i] = (i < n) ? "g" : "r";
+    }
+  }
+
+  String h = "<div class=meter>";
+  for (int i = 0; i < N; i++) h += "<div class='seg " + seg[i] + "'></div>";
+  return h + "</div>";
 }
 
 // --- Handlers -------------------------------------------------------------------------------
@@ -157,6 +193,8 @@ static void handleStatus() {
     body += row("Updated", age);
     body += "</div>";
   }
+  // LED strip preview — the same 8-segment meter the physical strip shows, right below the table.
+  body += "<div class=card><div class=k>LED strip</div>" + meterHtml(s, thresh) + "</div>";
   body += pageFoot();
   s_server.send(200, "text/html", body);
 }
@@ -231,6 +269,9 @@ static void handleConfigGet(const String& msg = "") {
   b += "<form method=POST action=/config>"
        "<p class=k>Low-range alert threshold (miles)</p>"
        "<input name=threshold type=number min=1 max=500 value='" + String(Settings::rangeThresholdMiles()) + "'>"
+       "<p class=k>LED brightness</p>"
+       "<input name=brightness type=range min=1 max=255 value='" + String(Settings::ledBrightness()) + "'"
+       " oninput='bo.value=this.value'><output id=bo>" + String(Settings::ledBrightness()) + "</output>"
        "<p class=k>Device name</p>"
        "<input name=name maxlength=32 value='" + Settings::deviceName() + "'>"
        "<button type=submit>Save</button></form>";
@@ -239,6 +280,7 @@ static void handleConfigGet(const String& msg = "") {
 }
 static void handleConfigPost() {
   if (s_server.hasArg("threshold")) Settings::setRangeThresholdMiles(s_server.arg("threshold").toInt());
+  if (s_server.hasArg("brightness")) Settings::setLedBrightness(s_server.arg("brightness").toInt());
 
   // A device-name change means a new DHCP hostname + mDNS + AP name. Those only re-register on a
   // fresh STA association, so — like sonos-nest — save and reboot so all three come up together.

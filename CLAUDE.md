@@ -57,6 +57,8 @@ pio run -e phase3                                  # build
 pio run -e phase3 -t upload --upload-port /dev/ttyACM0   # USB flash
 OTA_PASSWORD=<pw> pio run -e phase3-ota -t upload --upload-port <device-ip>  # wireless flash
 ```
+Wireless flashing is packaged as the **`/ota`** skill (`.claude/skills/ota/`) — build phase3,
+mDNS-discover the IP (`find_device.py`, since WSL can't resolve `.local`), espota-upload, verify.
 **Serial capture in WSL** (the `pio device monitor` OTP-typing + upload-reset race is a pain — use
 this instead):
 ```bash

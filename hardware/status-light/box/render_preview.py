@@ -93,9 +93,11 @@ a.add_patch(Rectangle((-P.OUT_X2, -P.OUT_Y2), P.OUT_X, P.OUT_Y, fill=False, ec='
 a.add_patch(Rectangle((-P.IN_X2, -P.IN_Y2), P.IN_X, P.IN_Y, fill=False, ec='#bbb', ls='--'))
 a.add_patch(Rectangle((-P.PCB_W / 2, P.PCB_FRONT_Y), P.PCB_W, P.PCB_L, color=C_PCB, alpha=0.8))
 a.add_patch(Rectangle((-P.LED_L / 2, P.STRIP_CY - P.LED_W / 2), P.LED_L, P.LED_W, fill=False, ec=C_LED, ls=':'))
-# USB-C stub (back wall)
-a.add_patch(Rectangle((P.USB_PORT_CX - P.USB_SHELL_W / 2, P.PCB_BACK_Y),
-                      P.USB_SHELL_W, P.USB_OVERHANG + P.WALL, color='#444'))
+# USB-C shell (back wall) + the lid clamp pads that straddle it
+a.add_patch(Rectangle((P.USB_PORT_CX - P.USB_SHELL_W / 2, P.PCB_BACK_Y - 5.5),
+                      P.USB_SHELL_W, 5.5 + P.USB_OVERHANG + P.WALL, color='#444'))
+for (px, py) in P.BOARD_PAD_XY:
+    a.add_patch(Circle((px, py), P.BOARD_PAD_D / 2, fc='none', ec='#e0b878', lw=1.5))
 # stick posts, lid bosses, U.FL jack, antenna notch
 for hx in P.LED_HOLE_X:
     a.add_patch(Circle((hx, P.POST_CY), P.POST_OD / 2, fc='#c0424a', ec='#600'))

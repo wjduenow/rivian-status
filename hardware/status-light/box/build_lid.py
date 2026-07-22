@@ -20,10 +20,11 @@ from build_shell import rrect, prism, box_at, cyl_z
 def build_lid():
     lid = prism(rrect(P.OUT_X, P.OUT_Y, P.OUT_R), P.SHELL_H, P.OUT_Z)
 
-    # board clamp pads: hang from the underside down to just above the PCB top
+    # board clamp pads: hang from the underside down to just above the PCB top, straddling
+    # the USB-C shell
     adds = []
     for (px, py) in P.BOARD_PAD_XY:
-        adds.append(cyl_z(2.2, P.PCB_TOP_Z + 0.3, P.SHELL_H, px, py))
+        adds.append(cyl_z(P.BOARD_PAD_D / 2, P.PCB_TOP_Z + 0.3, P.SHELL_H, px, py))
     lid = union([lid] + adds)
 
     subs = []

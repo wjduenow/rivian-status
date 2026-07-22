@@ -169,5 +169,10 @@ LID_BOSS_OD = 5.5
 LID_BOSS_XY = [(sx * (IN_X2 - LID_BOSS_OD / 2 - 0.3), sy * (IN_Y2 - LID_BOSS_OD / 2 - 0.3))
                for sx in (-1, 1) for sy in (-1, 1)]
 
-# board clamp pads (lid), on the back half, clear of the tall USB-C and the stick
-BOARD_PAD_XY = [(-6.0, PCB_BACK_Y - 3.0), (6.0, PCB_BACK_Y - 3.0)]
+# board clamp pads (lid): straddle the ~9 mm USB-C shell, landing on the bare PCB either
+# side of it (not on top of the connector).  The strip between the shell edge (±4.47) and
+# the board edge (±8.9) is only ~4.4 mm, so the pad is slim and sits with ~0.4 mm clear of
+# each.
+BOARD_PAD_D = 3.4
+BOARD_PAD_X = USB_SHELL_W / 2 + 0.4 + BOARD_PAD_D / 2     # inner edge 0.4 off the shell
+BOARD_PAD_XY = [(-BOARD_PAD_X, PCB_BACK_Y - 3.0), (BOARD_PAD_X, PCB_BACK_Y - 3.0)]

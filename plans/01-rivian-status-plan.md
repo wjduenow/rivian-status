@@ -34,7 +34,7 @@ captive portal, an embedded config web page, NVS-persisted settings, and Arduino
 | Poll cadence | **30 s**, exponential backoff on error capped at **900 s**. |
 | Primary alert | **current range `< X`**, where X is configurable in the web page. |
 | Board | **Seeed Studio XIAO ESP32-S3** (ESP32-S3R8, 8 MB PSRAM, USB-C). |
-| LED hardware | **8-pixel WS2812/NeoPixel stick**, one pixel per indicator (§7). Data on `D0`/GPIO1; powered from the `5V` (USB VBUS) pin; single-supply via a firmware brightness cap. |
+| LED hardware | **8-pixel WS2812/NeoPixel stick**, one pixel per indicator (§7). Data on `D10`/GPIO9; powered from the `5V` (USB VBUS) pin; single-supply via a firmware brightness cap. |
 
 ### Open decisions (defer, noted where relevant)
 - ~~`distanceToEmpty` units~~ — **CONFIRMED 2026-07-21 (Phase 1, live vehicle): the API field is
@@ -253,14 +253,15 @@ values — capture them by re-running phase1 in those states (plan §10 note).
 GND│ ●───────────────────────────────────► GND
 3V3│ ●   (do NOT use — 700 mA reg,               ▲
    │      shared with the ESP32)                 │ common ground
-D0 │ ●──[ ~330 Ω ]──────────────────────► DIN    │
+D10│ ●──[ ~330 Ω ]──────────────────────► DIN    │
    │  ...                                         │
    └───────────────────────────────────┘         │
                                                   │
    (optional) 470–1000 µF cap across the stick's 5V↔GND if pixel 0 flickers on power-up
 ```
-- **DIN** ← `D0` (GPIO1) through a **~330 Ω** series resistor. Avoid strapping/USB pins
-  (GPIO0/3/19/20/45/46).
+- **DIN** ← `D10` (GPIO9) through a **~330 Ω** series resistor. GPIO9 is a plain IO — not a
+  strapping/USB pin (avoid GPIO0/3/19/20/45/46), so it's safe to drive at boot. `D10` is the
+  board's default SPI MOSI, which is free here (no SPI peripheral used).
 - **5V** (VIN) ← the XIAO **`5V`** pin — the USB VBUS passthrough (top pin by the USB-C jack).
   Present only when USB-powered; if the board is ever run from a LiPo, this pin is dead and the
   strip loses power (not our case — this is a mains-USB appliance).
@@ -291,7 +292,7 @@ Suggested module split (keeps the unofficial-API surface centralized):
   + WiFi pass aren't at rest in cleartext (see §11).
 - `webserver` — SoftAP captive-portal WiFi join + the config/status/login page (§9).
 - `leds` — the state machine mapping `VehicleStatus` + link health → the 8-pixel map (§7).
-  Uses **`fastled/FastLED`** on `-DLED_DATA_PIN=1` (D0/GPIO1); enforces the brightness-cap
+  Uses **`fastled/FastLED`** on `-DLED_DATA_PIN=9` (D10/GPIO9); enforces the brightness-cap
   default (§7 power budget) as a hard floor, not a user knob.
 - `main` — boot: wifi (or SoftAP) → ensureAuth → fetchVin → poll loop (30 s) → drive LEDs;
   host `ArduinoOTA.handle()` in `loop()`.
@@ -372,7 +373,7 @@ surface. Acceptable for a hobby appliance on a trusted network; surface a short 
    over WiFi (authenticated) succeeded and the device rebooted into it — no USB.** (Enclosure is
    physical, still to do; link-health behavior lands with the LEDs.)
 6. **LEDs (last — needs the 8-pixel stick).** Wire the `leds` FreeRTOS state machine to real
-   status on the locked stick (§7): FastLED on D0/GPIO1, the per-pixel map, brightness-cap
+   status on the locked stick (§7): FastLED on D10/GPIO9, the per-pixel map, brightness-cap
    default, and the fullness bar + `batteryLimit` mark. Finish the `chargerState`/`chargePortState`
    enum set (idle/unplugged/complete/fault) in this phase; `charging_active`/`open` captured.
 

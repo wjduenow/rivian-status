@@ -18,7 +18,7 @@ left, blocked on hardware.
 | 3 | Web UI (`/` status, `/login`, `/config`) + poll task | ✅ |
 | 4 | WiFi provisioning (SoftAP captive portal) + DHCP hostname = device name | ✅ |
 | 5 | OTA wireless updates (ArduinoOTA) | ✅ |
-| 6 | **LEDs** — 8-pixel WS2812 stick, FastLED on D0/GPIO1 | ⏳ needs the stick |
+| 6 | **LEDs** — 8-pixel WS2812 stick, FastLED on D10/GPIO9 | ⏳ needs the stick |
 
 **The shipped appliance = the `phase3` env.** `phase1`/`phase2` are serial-only diagnostic
 harnesses (they hard-code creds in `secrets.h` and print to serial). New product features go in the
@@ -27,7 +27,7 @@ harnesses (they hard-code creds in `secrets.h` and print to serial). New product
 ## Hardware
 - **Board:** Seeed Studio XIAO ESP32-S3 (native USB-C). **The external U.FL antenna MUST be
   plugged in** or WiFi fails with `AUTH_EXPIRE`/`HANDSHAKE_TIMEOUT` (looks like a bad password).
-- **LEDs (Phase 6):** 8-pixel WS2812/NeoPixel stick. DIN←`D0`/GPIO1 (~330 Ω), 5V←`5V` pin (USB
+- **LEDs (Phase 6):** 8-pixel WS2812/NeoPixel stick. DIN←`D10`/GPIO9 (~330 Ω), 5V←`5V` pin (USB
   VBUS), GND←GND. Single-supply, safe behind a firmware brightness cap. Pixel map in plan §7.
 
 ## Modules (`src/`)
@@ -89,7 +89,7 @@ stty -F /dev/ttyACM0 115200 raw -echo; cat /dev/ttyACM0   # send input: printf '
   (`webserver.cpp handleStatus`) and/or the LED map.
 - **New config option:** add to `settings.{h,cpp}` (NVS) → add a field to `/config`
   (`webserver.cpp handleConfigGet/Post`). A device-name change must reboot (hostname/mDNS/AP).
-- **Phase 6 LEDs:** create a `leds` module, `fastled/FastLED` on `-DLED_DATA_PIN=1`, drive it from
+- **Phase 6 LEDs:** create a `leds` module, `fastled/FastLED` on `-DLED_DATA_PIN=9`, drive it from
   the `webserver` snapshot; enforce a brightness cap; expose an `otaActive()` cue. Map in plan §7.
 
 ## Secrets (`include/secrets.h`, gitignored — template `secrets.h.example`)

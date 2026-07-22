@@ -1,11 +1,11 @@
 // leds — 8-pixel WS2812 status meter. See leds.h.
 //
 // Behavior — the whole strip is one meter, filled by SoC / charge-target (batteryLimit):
-//   link DOWN (offline / re-auth / no data)   -> pixel 0 pulses red, rest off
-//   link UP + charging                         -> the leading meter pixel pulses red (climbs), rest off
-//   link UP + not charging + below target      -> all pixels flash red together (plug-in alert)
-//   link UP + not charging + at/above target   -> all pixels solid green (meter full)
-//   OTA push in progress                       -> whole strip is a blue progress bar
+//   link DOWN (offline / re-auth / no data)            -> pixel 0 pulses red, rest off
+//   link UP + charging                                  -> leading meter pixel pulses red (climbs), rest off
+//   link UP + not charging + range below threshold      -> all pixels flash red together (low-range alert)
+//   link UP + not charging + range OK                   -> meter: green filled + red empty (fill = SoC/target)
+//   OTA push in progress                                -> whole strip is a blue progress bar
 #ifdef PHASE3_WEBAPP
 
 #include "leds.h"
@@ -13,6 +13,7 @@
 #include <math.h>
 
 #include "webserver.h"
+#include "settings.h"
 #include "net_ota.h"
 
 #ifndef LED_DATA_PIN
@@ -70,18 +71,26 @@ static void render() {
   float target = (isnan(v.batteryLimit) || v.batteryLimit <= 1.0f) ? 100.0f : v.batteryLimit;
   float soc    = isnan(v.batteryLevel) ? 0.0f : v.batteryLevel;
   float f      = constrain(soc / target, 0.0f, 1.0f);        // fraction of target
+  int   n      = (int)lroundf(f * LED_COUNT);                // filled pixels
+  if (soc < target - 0.5f && n >= LED_COUNT) n = LED_COUNT - 1;   // "all full" only at target
 
+  // Charging: the leading meter pixel pulses red, everything else off; it climbs as SoC rises.
   if (sCharging(v)) {
-    // Charging: the leading meter pixel pulses red, everything else off; it climbs as SoC rises.
-    int lead = constrain((int)(f * LED_COUNT), 0, LED_COUNT - 1);
+    int lead = constrain(n - 1, 0, LED_COUNT - 1);
     leds[lead] = CRGB(u8(40 + 200 * wave(900, now)), 0, 0);
-  } else if (soc < target - 0.5f) {
-    // Not charging & below target: all pixels flash red together (plug-in alert).
-    fill_solid(leds, LED_COUNT, blink(600, now) ? CRGB(185, 0, 0) : CRGB::Black);
-  } else {
-    // Not charging & at/above target: full green meter.
-    fill_solid(leds, LED_COUNT, CRGB(0, 160, 0));
+    return;
   }
+
+  // Not charging + range below the low-range threshold: all pixels flash red (low-range alert).
+  float miles = isnan(v.distanceToEmpty) ? NAN : v.distanceToEmpty / 1.60934f;
+  if (!isnan(miles) && miles < Settings::rangeThresholdMiles()) {
+    fill_solid(leds, LED_COUNT, blink(600, now) ? CRGB(185, 0, 0) : CRGB::Black);
+    return;
+  }
+
+  // Not charging + range OK: meter — green up to SoC/target, red for the empty remainder.
+  for (int i = 0; i < LED_COUNT; i++)
+    leds[i] = (i < n) ? CRGB(0, 160, 0) : CRGB(130, 0, 0);
 }
 
 void ledsBegin() {

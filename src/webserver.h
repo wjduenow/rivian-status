@@ -6,7 +6,17 @@
 #pragma once
 
 #include <Arduino.h>
+#include "rivian_api.h"
 
 void webAppBegin();   // start mDNS + HTTP server + poll task. Call after WiFi is up, system time
                       // is set, RivianApi::begin() and Settings::begin() have run.
 void webAppLoop();     // call from loop(): services the HTTP server.
+
+// Snapshot for the LED module (plan §7): the latest poll + link health, mutex-copied.
+struct LedState {
+  int      link;     // 0 = OK, 1 = re-auth needed, 2 = offline
+  bool     everOk;   // any successful poll since boot
+  uint32_t ageMs;    // ms since the last good poll (0 if never)
+  VehicleStatus vs;  // latest telemetry (vs.valid == false until the first poll)
+};
+LedState ledState();

@@ -241,9 +241,12 @@ Priority still matters for shared cues (a fault or offline state should be unmis
 with one pixel per role there's no multiplexing to arbitrate; the `leds` state machine (§8) just
 sets 8 colors per update.
 
-**Observed enum values (Phase 1, growing):** `chargerState = "charging_active"`,
-`chargePortState = "open"`. Still needed to complete the map: the idle/unplugged/complete/fault
-values — capture them by re-running phase1 in those states (plan §10 note).
+**Observed enum values (growing):** `chargerState = "charging_active"` (pushing power) and
+`"charging_ready"` (plugged, idle); `chargePortState = "open"` (seen while active) and `"close"`
+(seen while ready) — the port value is ambiguous, so the `leds` module derives *plugged* from
+`chargerState.startsWith("charging")` instead. Still needed: the unplugged/complete/fault
+`chargerState` values — capture by observing those states. The `leds` enum reads are all
+centralised in `leds.cpp` (`sCharging`/`sPlugged`/`sFault`) for a one-line fix.
 
 ### Wiring (single-supply, USB-powered — no external PSU)
 ```

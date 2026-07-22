@@ -7,9 +7,10 @@ login incl. MFA, WiFi, threshold) happens in a browser — no screen.
 **Full design + rationale: `plans/01-rivian-status-plan.md` (the source of truth — read it).**
 **API research: `research/` (deep-research report + reverse-engineered protocol dig).**
 
-## Status (2026-07-21)
-Phases **1–5 DONE and verified live** against the real vehicle. Phase 6 (LEDs) is the only one
-left, blocked on hardware.
+## Status (2026-07-22)
+Phases **1–6 DONE and verified live** against the real vehicle. Phase 6 (LEDs) is implemented
+in the `leds` module and running in the shipped `phase3` app; remaining polish is visual tuning
+and capturing the last few `chargerState` enum values (unplugged/complete/fault).
 
 | Phase | What | State |
 |---|---|---|
@@ -18,7 +19,7 @@ left, blocked on hardware.
 | 3 | Web UI (`/` status, `/login`, `/config`) + poll task | ✅ |
 | 4 | WiFi provisioning (SoftAP captive portal) + DHCP hostname = device name | ✅ |
 | 5 | OTA wireless updates (ArduinoOTA) | ✅ |
-| 6 | **LEDs** — 8-pixel WS2812 stick, FastLED on D10/GPIO9 | ⏳ needs the stick |
+| 6 | **LEDs** — 8-pixel WS2812 stick, FastLED on D10/GPIO9 (`leds` module) | ✅ live |
 
 **The shipped appliance = the `phase3` env.** `phase1`/`phase2` are serial-only diagnostic
 harnesses (they hard-code creds in `secrets.h` and print to serial). New product features go in the
@@ -36,15 +37,21 @@ harnesses (they hard-code creds in `secrets.h` and print to serial). New product
 - `settings.{h,cpp}` — NVS `cfg`: range threshold (miles), device name (= hostname), WiFi creds.
 - `net_wifi.{h,cpp}` — connect (hostname before STA transition!), runtime creds, SoftAP portal.
 - `net_ota.{h,cpp}` — ArduinoOTA as `<device name>.local`.
-- `webserver.{h,cpp}` — WebServer:80 + the **FreeRTOS poll task** + shared snapshot (mutex-guarded).
+- `webserver.{h,cpp}` — WebServer:80 + the **FreeRTOS poll task** + shared snapshot (mutex-guarded);
+  exposes `ledState()` for the LED map.
+- `leds.{h,cpp}` — **Phase 6** 8-pixel WS2812 status map (§7) via FastLED on D10/GPIO9; reads
+  `ledState()` + `otaActive()`; brightness-capped. Built into `phase3` only (stubs elsewhere). All
+  Rivian enum reads (`sCharging`/`sPlugged`/`sFault`) are centralized here.
 - `main.cpp` — orchestration, split by `#ifdef PHASE1_SMOKE_TEST / PHASE2_POLL_LOOP / PHASE3_WEBAPP`.
+  `ledtest.cpp` is a standalone WS2812 wiring smoke-test (`-DPHASE6_LEDTEST`, its own env).
 
 **Concurrency (plan §8):** the poll runs in its own FreeRTOS task; web handlers run in `loop()`.
 `s_apiLock` serializes all `rivian_api` calls (one shared TLS client); `s_stateLock` guards the
 snapshot; `s_loginActive` pauses polling across a 2-step MFA login.
 
 ## Build / flash / run
-Envs: `phase1`, `phase2`, `phase3` (the app), `phase3-ota` (wireless upload).
+Envs: `phase1`, `phase2`, `phase3` (the app, incl. LEDs), `phase3-ota` (wireless upload),
+`phase6-ledtest` (standalone WS2812 wiring smoke-test on D10/GPIO9).
 ```bash
 pio run -e phase3                                  # build
 pio run -e phase3 -t upload --upload-port /dev/ttyACM0   # USB flash
@@ -89,8 +96,9 @@ stty -F /dev/ttyACM0 115200 raw -echo; cat /dev/ttyACM0   # send input: printf '
   (`webserver.cpp handleStatus`) and/or the LED map.
 - **New config option:** add to `settings.{h,cpp}` (NVS) → add a field to `/config`
   (`webserver.cpp handleConfigGet/Post`). A device-name change must reboot (hostname/mDNS/AP).
-- **Phase 6 LEDs:** create a `leds` module, `fastled/FastLED` on `-DLED_DATA_PIN=9`, drive it from
-  the `webserver` snapshot; enforce a brightness cap; expose an `otaActive()` cue. Map in plan §7.
+- **Tweak the LED map:** edit `leds.cpp render()` (per-pixel behavior, §7) or the enum readers
+  `sCharging`/`sPlugged`/`sFault`; pins/count/brightness are `phase3` build flags. Wiring smoke-test:
+  `pio run -e phase6-ledtest -t upload`.
 
 ## Secrets (`include/secrets.h`, gitignored — template `secrets.h.example`)
 `WIFI_SSID/PASS` (dev fallback), `RIVIAN_EMAIL/PASSWORD` (phase1/2 only — never shipped),

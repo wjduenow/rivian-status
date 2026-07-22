@@ -37,6 +37,17 @@ static Snap snapshot() {
   return c;
 }
 
+// Public accessor for the leds module (plan §7).
+LedState ledState() {
+  Snap s = snapshot();
+  LedState o;
+  o.link   = s.link;
+  o.everOk = s.everOk;
+  o.ageMs  = s.lastMs ? (millis() - s.lastMs) : 0;
+  o.vs     = s.vs;
+  return o;
+}
+
 // Convenience: take/give the API lock around a rivian_api call.
 #define API_LOCK()   xSemaphoreTake(s_apiLock, portMAX_DELAY)
 #define API_UNLOCK() xSemaphoreGive(s_apiLock)

@@ -38,6 +38,12 @@ def build_lid():
         subs.append(cyl_z(P.LID_SCREW_CLR / 2, P.SHELL_H - 1, P.OUT_Z + 1, bx, by))
         subs.append(cyl_z(P.LID_CSK_D / 2, P.OUT_Z - 1.4, P.OUT_Z + 0.1, bx, by))
 
+    # relief pockets above the stick's screw heads (they sit ~level with the LEDs and would
+    # otherwise foul the lid underside). Blind pocket — keeps ≥0.8 mm of roof over the top.
+    head_top = min(P.STRIP_SCREW_HEAD_TOP_Z + 0.4, P.OUT_Z - 0.8)
+    for hx in P.LED_HOLE_X:
+        subs.append(cyl_z(P.STRIP_SCREW_HEAD_D / 2 + 0.5, P.SHELL_H - 0.2, head_top, hx, P.POST_CY))
+
     lid = difference([lid] + subs)
     return lid
 

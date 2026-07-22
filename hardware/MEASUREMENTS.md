@@ -75,6 +75,7 @@ standoffs.
 | LED dome tops below the case top (`LED_BELOW_TOP`) | 2.0 | CHOICE |
 | Lid window (X × Y) | **51.0 × 6.0** | DERIVED (covers all emitters) |
 | Lid board-clamp pads | 2× Ø3.4, **13.1 mm apart**, straddling the 9 mm USB-C shell | DERIVED |
+| Lid screw-head relief pockets | 2× Ø7, above the stick screws (heads ~level with LEDs) | CHOICE |
 | USB-C port (back wall, X × Z) | 12.0 × 7.0 | CHOICE |
 | Antenna pigtail exit slot | **none** (`ANT_EXIT = False`, antenna coils inside) | CHOICE |
 | Room beyond each strip end (`STRIP_END_GAP`) | 9.7 (for the soldered end-wires) | CHOICE |

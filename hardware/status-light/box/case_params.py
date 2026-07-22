@@ -78,6 +78,8 @@ LED_DIN_AT_PLUS_X = True   # DIN toward +X (board is centred, so cosmetic)
 # ======================================================================================
 SCREW_PILOT   = 2.6    # M3 thread-forming pilot Ø
 STRIP_SCREW_LEN = 6.0  # M3 x 6 through the stick into a post
+STRIP_SCREW_HEAD_D = 6.0   # stick screw head Ø — the lid is pocketed above it for clearance
+STRIP_SCREW_HEAD_H = 2.2   # head height above the stick's top face (heads were ~ level with the LEDs)
 LID_SCREW_LEN = 8.0    # M3 x 8 through the lid into a side boss
 LID_SCREW_CLR = 3.4    # M3 clearance hole through the lid
 LID_CSK_D     = 6.0    # countersink Ø on the lid top (flat/pan head sits flush-ish)
@@ -141,6 +143,7 @@ OUT_X2, OUT_Y2 = OUT_X / 2, OUT_Y / 2
 # just below the domes so they poke up into the lid window.
 STRIP_PCB_TOP_Z = STRIP_BOTTOM_Z + LED_PCB_T
 STRIP_DOME_TOP_Z = STRIP_PCB_TOP_Z + LED_BODY_H
+STRIP_SCREW_HEAD_TOP_Z = STRIP_PCB_TOP_Z + STRIP_SCREW_HEAD_H   # top of the stick screw heads
 LED_MID_Z = STRIP_PCB_TOP_Z            # LED emitter plane ≈ PCB top
 OUT_Z  = STRIP_DOME_TOP_Z + LED_BELOW_TOP
 SHELL_H = OUT_Z - LID_T

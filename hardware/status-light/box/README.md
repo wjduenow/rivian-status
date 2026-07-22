@@ -6,7 +6,7 @@ onto two posts, the lid to four side-wall bosses. USB-C exits the **back wall** 
 fully proud); the U.FL antenna coils **inside** for now (a front-wall exit slot is a
 one-flag toggle, `ANT_EXIT`).
 
-**Outer size:** ~60.4 × 26.4 × 17.0 mm (recomputes from the params).
+**Outer size:** ~75.3 × 34.3 × 16.0 mm (recomputes from the params).
 
 ## Parts
 | File | What |

@@ -51,7 +51,7 @@ standoffs.
 | 5050 emitter size | **5.0** sq | SPEC |
 | Emitter extent (lit span + emitter) | **50.0** | DERIVED |
 | Mounting holes | **2**, Ø **3.75** | MEAS |
-| Hole positions along length (±X from centre) | **±12.75** | MEAS |
+| Hole positions along length (±X from centre) | **±13.0** (26 mm apart) | MEAS |
 | Hole offset off the LED row (toward one edge) | **1.5** | MEAS (dialled vs board) |
 
 ## 3. Fasteners  (M3 self-tapping into printed bosses — source: CHOICE/SPEC)
@@ -77,9 +77,11 @@ standoffs.
 | Lid board-clamp pads | 2× Ø3.4, **13.1 mm apart**, straddling the 9 mm USB-C shell | DERIVED |
 | USB-C port (back wall, X × Z) | 12.0 × 7.0 | CHOICE |
 | Antenna pigtail exit slot | **none** (`ANT_EXIT = False`, antenna coils inside) | CHOICE |
-| **Outer size (X × Y × Z)** | **57.9 × 26.4 × 16.0** | DERIVED |
+| Room beyond each strip end (`STRIP_END_GAP`) | 9.7 (for the soldered end-wires) | CHOICE |
+| Front working bay (`BOARD_FRONT_GAP`) | 8.4 (wires + antenna coil) | CHOICE |
+| **Outer size (X × Y × Z)** | **75.3 × 34.3 × 16.0** | DERIVED |
 | Shell rim height (`SHELL_H`) | 13.5 | DERIVED |
-| Interior (X × Y) | 53.5 × 22.0 | DERIVED |
+| Interior (X × Y) | 70.9 × 29.9 | DERIVED |
 
 ### Layout in one line
 XIAO lies flat on the floor (centred), USB-C proud out the **back wall**; the LED stick is

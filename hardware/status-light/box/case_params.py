@@ -66,7 +66,7 @@ LED_LIT_SPAN = 45.0    # centre-of-first-LED to centre-of-last
 # Cx caps / pad column), ~1/4 and ~3/4 along the length.
 LED_HOLE_COUNT = 2
 LED_HOLE_D     = 3.75   # measured hole Ø
-LED_HOLE_X     = [-12.75, 12.75]   # each hole's X-offset from the stick centre (measured)
+LED_HOLE_X     = [-13.0, 13.0]     # each hole's X from the stick centre (26 mm centre-to-centre)
 LED_5050       = 5.0    # the 5050 emitter is 5.0 mm square
 # offset of the hole row from the LED optical row, toward one long edge (both holes on the
 # same side).  Dialled in against the real board -- the posts read 3 mm too far back at 4.5:
@@ -89,6 +89,16 @@ WALL        = 2.2
 FLOOR_T     = 2.0
 LID_T       = 2.5      # thicker: takes the countersinks + the window rebate
 STANDOFF    = 2.0      # board off the floor (clears bottom pads / solder)
+
+# Generous room beyond EACH strip end (was 1.0, too tight once the DIN/5V/GND wires are
+# soldered to the end pads).  This widens the box ~30% in X and pushes the lid screw bosses
+# well clear of the strip ends so the wiring has somewhere to go.
+STRIP_END_GAP = 9.7
+
+# Depth (Y): the board sits against the BACK wall so the USB-C stays proud; the extra depth
+# (a ~30% longer box) becomes a roomy FRONT bay for the strip-end wires + the antenna coil.
+BOARD_BACK_GAP  = 0.5    # board's USB-C edge to the back wall (USB pokes through)
+BOARD_FRONT_GAP = 8.4    # front working bay (wires + U.FL antenna)
 
 BOARD_RIB_T = 1.5
 BOARD_RIB_H = STANDOFF + PCB_T + 0.6
@@ -120,9 +130,9 @@ SEG         = 96
 # ======================================================================================
 #  DERIVED  (nothing below is a free choice)
 # ======================================================================================
-IN_X   = LED_L + 2.0                       # interior clears the stick
+IN_X   = LED_L + 2 * STRIP_END_GAP         # interior = stick + wire room each end
 OUT_X  = IN_X + 2 * WALL
-IN_Y   = PCB_L + 1.0                        # board length + 0.5 gap each end
+IN_Y   = PCB_L + BOARD_BACK_GAP + BOARD_FRONT_GAP   # board + back gap + front working bay
 OUT_Y  = IN_Y + 2 * WALL
 IN_X2, IN_Y2 = IN_X / 2, IN_Y / 2
 OUT_X2, OUT_Y2 = OUT_X / 2, OUT_Y / 2
@@ -135,11 +145,11 @@ LED_MID_Z = STRIP_PCB_TOP_Z            # LED emitter plane ≈ PCB top
 OUT_Z  = STRIP_DOME_TOP_Z + LED_BELOW_TOP
 SHELL_H = OUT_Z - LID_T
 
-# board pose: centred in X and Y, USB-C at the +Y edge near the back wall
+# board pose: centred in X; pushed to the BACK wall in Y so the USB-C stays proud
 BOARD_CX = 0.0
-BOARD_CY = 0.0
-PCB_FRONT_Y = BOARD_CY - PCB_L / 2     # −Y (antenna) edge
-PCB_BACK_Y  = BOARD_CY + PCB_L / 2     # +Y (USB-C) edge
+PCB_BACK_Y  = IN_Y2 - BOARD_BACK_GAP    # +Y (USB-C) edge, near the back wall
+PCB_FRONT_Y = PCB_BACK_Y - PCB_L        # −Y (antenna) edge
+BOARD_CY    = (PCB_FRONT_Y + PCB_BACK_Y) / 2
 PCB_BACK_Z  = FLOOR_T + STANDOFF
 PCB_TOP_Z   = PCB_BACK_Z + PCB_T
 

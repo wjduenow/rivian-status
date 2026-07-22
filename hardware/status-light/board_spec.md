@@ -70,7 +70,7 @@ Not in any vendor CAD, so these are **caliper values** the user measured off the
 | Width (short edge) | **10 mm** |
 | Total thickness incl. LEDs | **3.0 mm** → PCB **1.6** + domes **1.4** |
 | Lit span (first→last LED centre) | **45 mm** (emitter extent ≈ 50 mm) |
-| Mounting holes | **2**, Ø **3.75 mm**, at **±12.75 mm** along the length from centre |
+| Mounting holes | **2**, Ø **3.75 mm**, at **±13.0 mm** along the length (26 mm apart) |
 | Hole offset from the LED row | **1.5 mm** to one long edge (dialled in vs the board) |
 
 From the board photo the holes are off to one long edge (by the Cx caps / pad column),

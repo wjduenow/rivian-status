@@ -223,30 +223,27 @@ lowRange   = rangeMiles < rangeThresholdX           // X in MILES, from NVS, set
 
 ## 7. LEDs (locked: 8-pixel WS2812 stick on the XIAO ESP32-S3)
 
-**Hardware (settled).** An **8-pixel WS2812/NeoPixel stick** (e.g. Adafruit NeoPixel Stick 8,
-or an equivalent bare stick — no onboard controller, since the XIAO *is* the controller). Eight
-pixels means **each indicator gets its own pixel** instead of multiplexing color+blink on one —
-clearer to read on a screenless appliance, and pixels 5–7 leave room for a 4-pixel fullness bar.
+**Hardware (settled).** An **8-pixel WS2812/NeoPixel stick** (bare, no onboard controller —
+the XIAO *is* the controller). The whole strip is a **single meter** (not one-pixel-per-role):
+it fills by **SoC ÷ charge-target** (`batteryLevel / batteryLimit`), so "full" = you've hit
+your set charge limit, not 100 %.
 
-### Pixel map
-| Pixel | Indicator | Source field(s) | Behavior |
-|---|---|---|---|
-| **0** | **Link health** | poll success / auth state | green heartbeat = OK · amber = re-auth needed · red = offline |
-| **1** | **Charging activity** | `chargerState` + `batteryLevel`≈`batteryLimit` | off = idle · pulsing = charging · steady = at target · red-blink = fault |
-| **2** | **Plug state** | `chargePortState` | dim white = plugged · off = unplugged |
-| **3** | **Low-range alert** | `distanceToEmpty` (+ `chargerState`) | steady red = low & not charging · slow pulse = low but charging · off = above X |
-| **4–7** | **Fullness bar + target** | `batteryLevel`, `batteryLimit` | 4-pixel bar (25/50/75/100 %) lit to current SoC, red→amber→green; the pixel at the **`batteryLimit`** mark tinted differently so a 70% cap vs a 100% charge is visible at a glance |
+### Behavior (implemented in `leds.cpp render()`)
+| State | Strip |
+|---|---|
+| **Link down** (offline / needs re-auth / no telemetry yet) | **pixel 0 pulses red**, rest off |
+| **Up + charging** (`chargerState == "charging_active"`) | the **leading meter pixel pulses red** and climbs as SoC rises; rest off |
+| **Up + not charging + below target** | **all pixels flash red together** (plug-in alert) |
+| **Up + not charging + at/above target** | **all pixels solid green** (meter full) |
+| **OTA push in progress** | whole strip = a **blue progress bar** (`otaProgress()`) |
 
-Priority still matters for shared cues (a fault or offline state should be unmistakable) — but
-with one pixel per role there's no multiplexing to arbitrate; the `leds` state machine (§8) just
-sets 8 colors per update.
+Brightness-capped (`-DLED_BRIGHTNESS`, single-supply off USB VBUS). "Charging" is `charging_active`
+only; `charging_ready` (plugged-idle) reads as not-charging.
 
-**Observed enum values (growing):** `chargerState = "charging_active"` (pushing power) and
-`"charging_ready"` (plugged, idle); `chargePortState = "open"` (seen while active) and `"close"`
-(seen while ready) — the port value is ambiguous, so the `leds` module derives *plugged* from
-`chargerState.startsWith("charging")` instead. Still needed: the unplugged/complete/fault
-`chargerState` values — capture by observing those states. The `leds` enum reads are all
-centralised in `leds.cpp` (`sCharging`/`sPlugged`/`sFault`) for a one-line fix.
+**Observed `chargerState` values (growing):** `"charging_active"` (pushing power),
+`"charging_ready"` (plugged, idle). Still needed: the unplugged / complete / fault values —
+capture by observing those states. `chargePortState` (`"open"`/`"close"`) is ambiguous and
+currently unused. The one enum read lives in `leds.cpp` (`sCharging`) for a one-line fix.
 
 ### Wiring (single-supply, USB-powered — no external PSU)
 ```

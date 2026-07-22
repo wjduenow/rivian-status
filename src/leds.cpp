@@ -2,7 +2,7 @@
 //
 // Behavior — the whole strip is one meter, filled by SoC / charge-target (batteryLimit):
 //   link DOWN (offline / re-auth / no data)            -> pixel 0 pulses red, rest off
-//   link UP + charging                                  -> leading meter pixel pulses red (climbs), rest off
+//   link UP + charging                                  -> meter in place; closest empty pixel slow-pulses green
 //   link UP + not charging + range below threshold      -> all pixels flash red together (low-range alert)
 //   link UP + not charging + range OK                   -> meter: green filled + red empty (fill = SoC/target)
 //   OTA push in progress                                -> whole strip is a blue progress bar
@@ -74,10 +74,11 @@ static void render() {
   int   n      = (int)lroundf(f * LED_COUNT);                // filled pixels
   if (soc < target - 0.5f && n >= LED_COUNT) n = LED_COUNT - 1;   // "all full" only at target
 
-  // Charging: the leading meter pixel pulses red, everything else off; it climbs as SoC rises.
+  // Charging: the meter stays in place (green filled + red empty); the closest empty pixel
+  // slow-pulses green — the cell currently filling. It climbs as SoC rises.
   if (sCharging(v)) {
-    int lead = constrain(n - 1, 0, LED_COUNT - 1);
-    leds[lead] = CRGB(u8(40 + 200 * wave(900, now)), 0, 0);
+    for (int i = 0; i < LED_COUNT; i++) leds[i] = (i < n) ? CRGB(0, 160, 0) : CRGB(130, 0, 0);
+    if (n < LED_COUNT) leds[n] = CRGB(0, u8(25 + 200 * wave(1800, now)), 0);
     return;
   }
 

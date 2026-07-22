@@ -144,8 +144,9 @@ static String meterHtml(const Snap& s, int threshMiles) {
     if (soc < target - 0.5f && n >= N) n = N - 1;
     float mi     = isnan(v.distanceToEmpty) ? NAN : v.distanceToEmpty / 1.60934f;
 
-    if (v.chargerState == "charging_active") {           // charging: leading pixel pulses red
-      seg[constrain(n - 1, 0, N - 1)] = "r pulse";
+    if (v.chargerState == "charging_active") {           // charging: meter + closest-empty green pulse
+      for (int i = 0; i < N; i++) seg[i] = (i < n) ? "g" : "r";
+      if (n < N) seg[n] = "g pulse";
     } else if (!isnan(mi) && mi < threshMiles) {         // low range: all flash red
       for (int i = 0; i < N; i++) seg[i] = "r flash";
     } else {                                             // meter: green filled + red empty

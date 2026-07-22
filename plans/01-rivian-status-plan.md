@@ -232,7 +232,7 @@ your set charge limit, not 100 %.
 | State | Strip |
 |---|---|
 | **Link down** (offline / needs re-auth / no telemetry yet) | **pixel 0 pulses red**, rest off |
-| **Up + charging** (`chargerState == "charging_active"`) | the **leading meter pixel pulses red** and climbs as SoC rises; rest off |
+| **Up + charging** (`chargerState == "charging_active"`) | meter stays in place (green filled + red empty); the **closest empty pixel slow-pulses green** (the cell filling), climbing as SoC rises |
 | **Up + not charging + range < threshold** (`distanceToEmpty` mi < `rangeThresholdMiles`) | **all pixels flash red together** (low-range alert) |
 | **Up + not charging + range OK** | **meter: green filled + red empty** (fill = SoC/target; all green once at target) |
 | **OTA push in progress** | whole strip = a **blue progress bar** (`otaProgress()`) |

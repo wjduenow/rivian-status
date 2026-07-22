@@ -48,11 +48,11 @@ standoffs.
 | Total thickness incl. LEDs | **3.0** | MEAS |
 | Pixel count | **8** | fixed (firmware, plan §7) |
 | Lit span (first→last LED centre) | **45.0** | MEAS |
-| 5050 emitter size | **5.0** sq | SPEC |
-| Emitter extent (lit span + emitter) | **50.0** | DERIVED |
+| LED square (emitter) | **4.75** | MEAS |
+| Emitter extent (lit span + emitter) | **49.75** | DERIVED |
 | Mounting holes | **2**, Ø **3.75** | MEAS |
 | Hole positions along length (±X from centre) | **±13.0** (26 mm apart) | MEAS |
-| Hole offset off the LED row (toward one edge) | **1.5** | MEAS (dialled vs board) |
+| Hole offset off the LED row (toward one edge) | **4.5** | MEAS |
 
 ## 3. Fasteners  (M3 self-tapping into printed bosses — source: CHOICE/SPEC)
 

@@ -71,10 +71,11 @@ Not in any vendor CAD, so these are **caliper values** the user measured off the
 | Total thickness incl. LEDs | **3.0 mm** → PCB **1.6** + domes **1.4** |
 | Lit span (first→last LED centre) | **45 mm** (emitter extent ≈ 50 mm) |
 | Mounting holes | **2**, Ø **3.75 mm**, at **±13.0 mm** along the length (26 mm apart) |
-| Hole offset from the LED row | **1.5 mm** to one long edge (dialled in vs the board) |
+| LED square (emitter) | **4.75 mm** |
+| Hole offset from the LED row | **4.5 mm** to one long edge (measured) |
 
 From the board photo the holes are off to one long edge (by the Cx caps / pad column),
-~¼ and ¾ along the length, **1.5 mm** off the LED row (`LED_HOLE_DY`). The box **screws
+~¼ and ¾ along the length, **4.5 mm** off the LED row (`LED_HOLE_DY`). The box **screws
 the stick down** onto two posts through those Ø3.75 holes (2× M3). The lid window spans the
 full **50 mm emitter extent** (lit span + one emitter), and the LEDs sit **2 mm below the
 case top** (`LED_BELOW_TOP`) so they read near the surface of the window slot.

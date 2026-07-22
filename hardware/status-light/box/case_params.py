@@ -67,10 +67,10 @@ LED_LIT_SPAN = 45.0    # centre-of-first-LED to centre-of-last
 LED_HOLE_COUNT = 2
 LED_HOLE_D     = 3.75   # measured hole Ø
 LED_HOLE_X     = [-13.0, 13.0]     # each hole's X from the stick centre (26 mm centre-to-centre)
-LED_5050       = 5.0    # the 5050 emitter is 5.0 mm square
+LED_5050       = 4.75   # measured LED square
 # offset of the hole row from the LED optical row, toward one long edge (both holes on the
-# same side).  Dialled in against the real board -- the posts read 3 mm too far back at 4.5:
-LED_HOLE_DY    = 1.5
+# same side) -- MEASURED: 4.5 mm centre-of-LED-row to centre-of-holes:
+LED_HOLE_DY    = 4.5
 LED_DIN_AT_PLUS_X = True   # DIN toward +X (board is centred, so cosmetic)
 
 # ======================================================================================
@@ -167,7 +167,9 @@ UFL_TOP_Z = PCB_TOP_Z + UFL_ABOVE_PCB_TOP
 # stick body + its screw holes sit offset toward +Y (the holes' edge).
 LED_CX, LED_CY = 0.0, 0.0                   # LED emitter row (window centre)
 POST_CY = LED_CY + LED_HOLE_DY             # the two stick-mount posts, offset off the LEDs
-STRIP_CY = LED_CY                          # stick body ≈ centred on its LED row
+# stick body centre: the holes sit ~0.4 mm off the strip's far edge (as on the real board),
+# so the body centre is inboard of the holes by (half-width − hole radius − 0.4)
+STRIP_CY = POST_CY - (LED_W / 2 - LED_HOLE_D / 2 - 0.4)
 # lid window -- spans the full LED EMITTER extent (lit span + one emitter), so every pixel
 # shows through and it's long enough end-to-end
 WIN_W = LED_LIT_SPAN + LED_5050 + 2 * WIN_MARGIN_X   # along X

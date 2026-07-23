@@ -20,6 +20,10 @@ need to re-derive it — start here.
   vote tallies), refuted claims (things that sound true but failed verification), open
   questions, and the full source list with quality ratings. Answers "what are ALL the options
   and which did we rule out and why."
+- **`battery-power.md`** — decision (2026-07-22, deep-research): can the LED strip run on
+  battery? No mainstream ESP32-S3 board has a battery-fed 5 V boost, so it's XIAO + an external
+  PowerBoost module if pursued; always-on WiFi runtime is short, so the shipped appliance stays
+  USB-powered. Board comparison + runtime math + wiring inside.
 
 ## The decision, in one paragraph
 

@@ -241,8 +241,9 @@ Brightness-capped (`-DLED_BRIGHTNESS`, single-supply off USB VBUS). "Charging" i
 only; `charging_ready` (plugged-idle) reads as not-charging.
 
 **Observed `chargerState` values (growing):** `"charging_active"` (pushing power),
-`"charging_ready"` (plugged, idle). Still needed: the unplugged / complete / fault values —
-capture by observing those states. `chargePortState` (`"open"`/`"close"`) is ambiguous and
+`"charging_ready"` (plugged, idle), `"charging_complete"` (finished / at target — reads as
+not-charging, so at/above target it shows the full green meter). Still needed: the unplugged /
+fault values — capture by observing those states. `chargePortState` (`"open"`/`"close"`) is ambiguous and
 currently unused. The one enum read lives in `leds.cpp` (`sCharging`) for a one-line fix.
 
 ### Wiring (single-supply, USB-powered — no external PSU)

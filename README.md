@@ -39,6 +39,20 @@ hit your set charge limit, e.g. 70 %, not 100 %):
 Brightness is adjustable on the config page. The status web page also shows a live **preview**
 of the strip below the data table.
 
+## The web interface
+
+Everything is configured in a browser — no app. The device serves three pages (plus a WiFi
+setup portal on first boot):
+
+| Status (`/`) | Login (`/login`) | Config (`/config`) |
+|:---:|:---:|:---:|
+| [![Status page](docs/screenshots/status.png)](docs/screenshots/status.png) | [![Login page](docs/screenshots/login.png)](docs/screenshots/login.png) | [![Config page](docs/screenshots/config.png)](docs/screenshots/config.png) |
+
+- **Status** — live charge %, target, range, charger/plug state, and a preview of the LED strip.
+- **Login** — one-time Rivian sign-in (email + password, then the emailed MFA code); only the
+  session token is stored, never the password.
+- **Config** — low-range alert threshold, LED brightness, and device name.
+
 ## Parts
 
 | Part | Notes | Link |

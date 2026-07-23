@@ -108,7 +108,7 @@ static const char* CSS =
   "cursor:pointer;margin-top:.6rem}.pill{padding:.15rem .5rem;border-radius:999px;font-size:.85rem}"
   ".ok{background:#153}.warn{background:#530}.err{background:#500}nav a{margin-right:1rem}"
   ".meter{display:flex;gap:4px;margin:.3rem 0}.seg{flex:1;height:20px;border-radius:4px}"
-  ".seg.o{background:#2a2a2a}.seg.g{background:#2ecc40}.seg.r{background:#ff4136}"
+  ".seg.o{background:#2a2a2a}.seg.g{background:#2ecc40}.seg.r{background:#ff4136}.seg.w{background:#e8e8e8}"
   ".pulse{animation:pl 1s ease-in-out infinite}.flash{animation:fl .6s steps(1,end) infinite}"
   "@keyframes pl{0%,100%{opacity:.3}50%{opacity:1}}@keyframes fl{0%,50%{opacity:1}50.01%,100%{opacity:.15}}"
   "output{color:#9a9a9a;margin-left:.5rem}";
@@ -145,12 +145,12 @@ static String meterHtml(const Snap& s, int threshMiles) {
     float mi     = isnan(v.distanceToEmpty) ? NAN : v.distanceToEmpty / 1.60934f;
 
     if (v.chargerState == "charging_active") {           // charging: meter + closest-empty green pulse
-      for (int i = 0; i < N; i++) seg[i] = (i < n) ? "g" : "r";
+      for (int i = 0; i < N; i++) seg[i] = (i < n) ? "g" : "w";
       if (n < N) seg[n] = "g pulse";
     } else if (!isnan(mi) && mi < threshMiles) {         // low range: all flash red
       for (int i = 0; i < N; i++) seg[i] = "r flash";
-    } else {                                             // meter: green filled + red empty
-      for (int i = 0; i < N; i++) seg[i] = (i < n) ? "g" : "r";
+    } else {                                             // meter: green filled + white empty
+      for (int i = 0; i < N; i++) seg[i] = (i < n) ? "g" : "w";
     }
   }
 

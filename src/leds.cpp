@@ -4,7 +4,7 @@
 //   link DOWN (offline / re-auth / no data)            -> pixel 0 pulses red, rest off
 //   link UP + charging                                  -> meter in place; closest empty pixel slow-pulses green
 //   link UP + not charging + range below threshold      -> all pixels flash red together (low-range alert)
-//   link UP + not charging + range OK                   -> meter: green filled + red empty (fill = SoC/target)
+//   link UP + not charging + range OK                   -> meter: green filled + white empty (fill = SoC/target)
 //   OTA push in progress                                -> whole strip is a blue progress bar
 #ifdef PHASE3_WEBAPP
 
@@ -74,10 +74,10 @@ static void render() {
   int   n      = (int)lroundf(f * LED_COUNT);                // filled pixels
   if (soc < target - 0.5f && n >= LED_COUNT) n = LED_COUNT - 1;   // "all full" only at target
 
-  // Charging: the meter stays in place (green filled + red empty); the closest empty pixel
+  // Charging: the meter stays in place (green filled + white empty); the closest empty pixel
   // slow-pulses green — the cell currently filling. It climbs as SoC rises.
   if (sCharging(v)) {
-    for (int i = 0; i < LED_COUNT; i++) leds[i] = (i < n) ? CRGB(0, 160, 0) : CRGB(130, 0, 0);
+    for (int i = 0; i < LED_COUNT; i++) leds[i] = (i < n) ? CRGB(0, 160, 0) : CRGB(120, 120, 120);
     if (n < LED_COUNT) leds[n] = CRGB(0, u8(25 + 200 * wave(1800, now)), 0);
     return;
   }
@@ -89,9 +89,9 @@ static void render() {
     return;
   }
 
-  // Not charging + range OK: meter — green up to SoC/target, red for the empty remainder.
+  // Not charging + range OK: meter — green up to SoC/target, white for the empty remainder.
   for (int i = 0; i < LED_COUNT; i++)
-    leds[i] = (i < n) ? CRGB(0, 160, 0) : CRGB(130, 0, 0);
+    leds[i] = (i < n) ? CRGB(0, 160, 0) : CRGB(120, 120, 120);
 }
 
 void ledsBegin() {

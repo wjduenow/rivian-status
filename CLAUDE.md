@@ -78,9 +78,10 @@ cd hardware/status-light/<box|box-v2> && conda run -n img23d python build_all.py
 ## Modules (`src/`)
 - `rivian_api.{h,cpp}` — **the ONLY file that knows Rivian's URLs/headers/GraphQL** (plan §8).
   Read-only telemetry; persists `u-sess`+`dc-cid` to NVS; reuses the session on boot (no OTP).
-- `settings.{h,cpp}` — NVS `cfg`: range threshold (miles), LED brightness, mounting rotation
-  (`led_rot` 0/90/180/270 = where the plug exits; `ledFlipped()`/`ledVertical()` derive from it),
-  device name (= hostname), WiFi creds.
+- `settings.{h,cpp}` — NVS `cfg`: range threshold (miles), LED brightness, mounting (`led_rot`
+  0/90/180/270 = where the plug exits, + `led_vert0` enclosure axis and `led_inv` — see plan §7;
+  `ledFlipped()`/`ledVertical()` derive from all three via `pixel0Dir()`), device name
+  (= hostname), WiFi creds.
 - `net_wifi.{h,cpp}` — connect (hostname before STA transition!), runtime creds, SoftAP portal.
 - `net_ota.{h,cpp}` — ArduinoOTA as `<device name>.local`.
 - `webserver.{h,cpp}` — WebServer:80 + the **FreeRTOS poll task** + shared snapshot (mutex-guarded);

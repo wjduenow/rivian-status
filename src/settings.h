@@ -25,8 +25,24 @@ void setLedBrightness(int b);              // clamped to [1, 255], persisted
 int  ledRotation();                        // 0 | 90 | 180 | 270 (default 0)
 void setLedRotation(int deg);              // snapped to the nearest quarter turn, persisted
 
-bool ledFlipped();                         // derived: does the strip need reversing? (rot >= 180)
-bool ledVertical();                        // derived: is the stick vertical? (rot 0 or 180)
+// The two things the firmware genuinely cannot know, so they're settings rather than guesses.
+// Together with the rotation they pin down the strip completely.
+//
+// 1. Which AXIS the stick lands on — this differs per enclosure, so plug position alone is not
+//    enough. v2 (wall case) holds the stick vertically on the charger's portrait face; v1 (box,
+//    board flat to the wall, LEDs facing out) holds it horizontally. Hence: at plug-at-bottom,
+//    is the stick vertical?
+bool ledStickVertical0();                  // true = v2 wall case, false = v1 box (default)
+void setLedStickVertical0(bool vertical);
+
+// 2. Which physical END pixel 0 is. Not derivable — it depends on how the stick was wired into
+//    that particular unit. Rather than assume, expose it as a "the meter fills the wrong way"
+//    escape hatch: one glance at the device settles it.
+bool ledInverted();
+void setLedInverted(bool inverted);
+
+bool ledFlipped();                         // derived: does the buffer need reversing?
+bool ledVertical();                        // derived: is the stick vertical AS MOUNTED?
 
 String deviceName();                       // DHCP hostname + mDNS + UI title (default DEVICE_HOSTNAME)
 void   setDeviceName(const String& name);  // sanitized to DNS-safe, then persisted

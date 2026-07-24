@@ -287,7 +287,9 @@ static void handleOtpPost() {
 // can see it on, and the 8 meter cells shaded the way they'll fill once the firmware compensates.
 // Note the shading is always "full toward the top / the right" — that invariant IS the feature.
 static String orientSvg(int rot) {
-  const bool vert = (rot == 0 || rot == 180);        // plug bottom/top -> the stick lands vertical
+  // Which axis the stick lands on depends on the enclosure as well as the rotation: a quarter
+  // turn swaps it, a half turn doesn't. (v1 box = horizontal at plug-down, v2 wall case = vertical.)
+  const bool vert = Settings::ledStickVertical0() != (rot == 90 || rot == 270);
   const int  W = vert ? 26 : 54, H = vert ? 54 : 26;
   const int  x0 = (64 - W) / 2, y0 = (64 - H) / 2;
   const int  FILLED = 5;                             // representative 5-of-8 fill, just for shape
@@ -342,14 +344,29 @@ static void handleConfigGet(const String& msg = "") {
   // Mounting orientation. Asked as "where's the plug?" because that's the thing you can see
   // without thinking about LED wiring — the outlet decides how the device ends up hanging.
   const int rot = Settings::ledRotation();
+  const bool v0 = Settings::ledStickVertical0();
+  b += "<p class=k>Enclosure</p>"
+       "<select name=enclosure>"
+       "<option value=0" + String(v0 ? "" : " selected") + ">Box (v1) — LED bar runs across</option>"
+       "<option value=1" + String(v0 ? " selected" : "") + ">Wall case (v2) — LED bar runs up-down</option>"
+       "</select>"
+       "<p class=k style='font-size:.8rem'>Set once per unit: which way the LED stick sits in the "
+       "case, with the plug at the bottom. It decides whether a quarter turn makes the meter "
+       "vertical or horizontal.</p>";
   b += "<p class=k>Mounting — where does the plug come out?</p><div class=orient>";
   b += orientCard(0,   "Bottom", rot);
   b += orientCard(90,  "Left",   rot);
   b += orientCard(180, "Top",    rot);
   b += orientCard(270, "Right",  rot);
-  b += "</div><p class=k style='font-size:.8rem'>The meter always fills toward the top (mounted "
-       "upright) or toward the right (mounted sideways) — pick the picture that matches your "
-       "device and the firmware handles the rest.</p>";
+  b += "</div><p class=k style='font-size:.8rem'>The meter always fills toward the top (when it "
+       "lands vertical) or toward the right (when it lands sideways) — pick the picture that "
+       "matches your device and the firmware handles the rest.</p>";
+  // Which end of the stick pixel 0 is on isn't knowable from the wiring, so this is the escape
+  // hatch: if the meter drains the wrong way, one glance and one click settles it.
+  b += "<p class=k><label style='color:#9a9a9a'><input type=checkbox name=invert value=1"
+       + String(Settings::ledInverted() ? " checked" : "") +
+       " style='width:auto;margin-right:.4rem;accent-color:#3a7'>Meter fills the wrong way "
+       "— reverse it</label></p>";
   b += "<p class=k>Device name</p>"
        "<input name=name maxlength=32 value='" + Settings::deviceName() + "'>"
        "<button type=submit>Save</button></form>";
@@ -359,8 +376,14 @@ static void handleConfigGet(const String& msg = "") {
 static void handleConfigPost() {
   if (s_server.hasArg("threshold")) Settings::setRangeThresholdMiles(s_server.arg("threshold").toInt());
   if (s_server.hasArg("brightness")) Settings::setLedBrightness(s_server.arg("brightness").toInt());
-  // Takes effect on the next LED frame (~20 ms) — no reboot, same as brightness.
-  if (s_server.hasArg("orientation")) Settings::setLedRotation(s_server.arg("orientation").toInt());
+  // Takes effect on the next LED frame (~20 ms) — no reboot, same as brightness. The radios always
+  // post one value, so their presence marks a real submit — which is what lets the unchecked
+  // "invert" checkbox (which posts nothing at all) be read as false rather than "absent".
+  if (s_server.hasArg("orientation")) {
+    Settings::setLedRotation(s_server.arg("orientation").toInt());
+    Settings::setLedStickVertical0(s_server.arg("enclosure") == "1");
+    Settings::setLedInverted(s_server.hasArg("invert"));
+  }
 
   // A device-name change means a new DHCP hostname + mDNS + AP name. Those only re-register on a
   // fresh STA association, so — like sonos-nest — save and reboot so all three come up together.

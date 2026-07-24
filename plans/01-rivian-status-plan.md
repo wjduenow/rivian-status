@@ -253,15 +253,24 @@ fill. That's a thing you can see without reasoning about LED wiring. Stored as
 `Settings::ledRotation()` (NVS `led_rot`, 0/90/180/270, snapped to the nearest quarter turn; it
 defaults off the older `led_flip` bool so an already-flipped unit lands on 180°).
 
-*Implementation:* `render()` always draws in **logical** order (index 0 = the "fill from" end) and
-`applyOrientation()` reverses the buffer afterwards when `Settings::ledFlipped()` — derived as
-`rot >= 180`, since 0/90 leave pixel 0 at the fill-from end and 180/270 don't. One remap covers
-every pattern in the table above, including the OTA bar. Applies on the next frame, no reboot.
+**Plug position alone is not enough** — two more facts are needed, and neither is derivable, so
+both are settings rather than assumptions:
 
-> **⚠️VERIFY (assumption):** the derived flip assumes that at 0° (plug at the bottom, v2's natural
-> mounting) **pixel 0 is the bottom-most LED**. If a built unit's stick is wired the other way the
-> whole mapping is inverted — it's a one-line fix in `Settings::ledFlipped()`. Confirm by eye on
-> the real device before treating this as settled.
+| Setting | NVS | Why it can't be derived |
+|---|---|---|
+| `ledStickVertical0()` — is the stick vertical with the plug at the bottom? | `led_vert0` | **Differs per enclosure.** v2's wall case holds the stick vertically on the charger's portrait face; **v1's box mounts board-flat to the wall, LEDs facing out, so its stick runs horizontal** — plug-at-bottom there reads left→right. Default `false` (v1, the unit in service). |
+| `ledInverted()` — is the meter filling the wrong way? | `led_inv` | Which physical end **pixel 0** is depends on how that unit's stick was wired. Exposed as a "meter fills the wrong way — reverse it" checkbox: one glance at the device settles it, no guessing in firmware. |
+
+*The math, all in `Settings`:* everything falls out of **`pixel0Dir()`** — where pixel 0 points
+once mounted, as clockwise degrees off screen-up. It starts at *down* (vertical stick) or *left*
+(horizontal), `+180` if inverted, `+ rotation` for the mounting. Then `ledVertical()` = pixel 0
+points up/down, and `ledFlipped()` = pixel 0 points up/right (the two cases where the meter would
+otherwise fill down or left). Verified exhaustively: the fill lands up-when-vertical /
+right-when-horizontal for **all 16** enclosure × invert × rotation combinations.
+
+*Implementation:* `render()` always draws in **logical** order (index 0 = the "fill from" end) and
+`applyOrientation()` reverses the buffer afterwards when `Settings::ledFlipped()`. One remap covers
+every pattern in the table above, including the OTA bar. Applies on the next frame, no reboot.
 
 The status page's 8-segment preview switches **axis** to match (`.meter.col`, a `column-reverse`
 so logical 0 sits at the bottom) — it never reverses, because the physical meter doesn't either.

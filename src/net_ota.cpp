@@ -29,6 +29,16 @@ void otaBegin() {
   Serial.printf("[ota] ready as %s.local @ %s\n", Net::hostname().c_str(), WiFi.localIP().toString().c_str());
 }
 
+// Re-advertise after the WiFi supervisor has re-associated. The mDNS responder and the espota
+// listener are bound to the old netif and don't come back on their own, so a self-healed device
+// would be reachable by IP but invisible to `.local` discovery — which is exactly how the /ota
+// skill finds it (find_device.py). Half-recovered is not recovered.
+void otaRestart() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  ArduinoOTA.end();
+  otaBegin();
+}
+
 void otaHandle()   { ArduinoOTA.handle(); }
 bool otaActive()   { return s_active; }
 int  otaProgress() { return s_progress; }

@@ -7,6 +7,8 @@
 
 #include "rivian_api.h"
 #include "settings.h"
+#include "net_wifi.h"
+#include "net_ota.h"
 
 // --- Link health (drives the status page and, later, the link-health LED) ------------------
 enum { LINK_OK = 0, LINK_REAUTH = 1, LINK_OFFLINE = 2 };
@@ -52,6 +54,50 @@ LedState ledState() {
 #define API_LOCK()   xSemaphoreTake(s_apiLock, portMAX_DELAY)
 #define API_UNLOCK() xSemaphoreGive(s_apiLock)
 
+// --- WiFi supervisor --------------------------------------------------------------------------
+// Re-register the name-based services after a reconnect. Both the mDNS responder and the espota
+// listener are bound to the netif that just died and do not come back on their own, so without
+// this a self-healed device is reachable by IP but invisible to `.local` — which is how the /ota
+// skill finds it (find_device.py). Half-recovered is not recovered.
+static void readvertise() {
+  MDNS.end();
+  if (MDNS.begin(Settings::deviceName().c_str())) MDNS.addService("http", "tcp", 80);
+  otaRestart();
+}
+
+// Sleep for `ms` while supervising the link, rather than going deaf inside one long vTaskDelay.
+// That matters here in a way it doesn't in sonos-nest (which polls every 3 s with no backoff):
+// this task's backoff reaches a 900 s cap, so a single blind sleep could leave the light stale
+// and red for a quarter of an hour after the network came back.
+//
+// Returns true if the link was restored during the wait — the caller retries immediately and
+// clears its error count, since those failures were the outage rather than a sick session.
+static bool s_linkWasDown = false;      // file-static so recovery is caught across calls too
+static bool sleepSupervised(uint32_t ms) {
+  const uint32_t SLICE = 500, KICK_MS = 10000;
+  static uint32_t s_lastKick = 0;
+
+  for (uint32_t waited = 0; waited < ms; waited += SLICE) {
+    if (!Net::isConnected()) {
+      s_linkWasDown = true;
+      const uint32_t now = millis();
+      if (now - s_lastKick > KICK_MS) {     // backed off so we don't spin on the radio
+        s_lastKick = now;
+        Serial.println("[net] wifi down — reconnecting");
+        Net::reconnect();
+      }
+    } else if (s_linkWasDown) {
+      s_linkWasDown = false;
+      Serial.printf("[net] wifi back — ip=%s (kick #%u)\n",
+                    Net::ip().toString().c_str(), (unsigned)Net::reconnectCount());
+      readvertise();
+      return true;
+    }
+    vTaskDelay(pdMS_TO_TICKS(SLICE));
+  }
+  return false;
+}
+
 // --- Poll task ------------------------------------------------------------------------------
 // Bootstraps from the persisted u-sess (no OTP): ensures VIN, then polls every 30 s with
 // exponential backoff. If the session is missing/dead, idles as REAUTH so the web /login flow
@@ -60,6 +106,14 @@ static void pollTask(void*) {
   uint32_t err = 0;
   for (;;) {
     if (s_loginActive) { vTaskDelay(pdMS_TO_TICKS(500)); continue; }
+
+    // No link: don't spend 15 s TLS timeouts against a dead netif. Show OFFLINE and let the
+    // supervisor work — this is the path that keeps the box from wedging until a power cycle.
+    if (!Net::isConnected()) {
+      setLink(LINK_OFFLINE);
+      if (sleepSupervised(1000)) err = 0;
+      continue;
+    }
 
     if (!RivianApi::hasSession()) { setLink(LINK_REAUTH); vTaskDelay(pdMS_TO_TICKS(2000)); continue; }
 
@@ -81,7 +135,7 @@ static void pollTask(void*) {
       xSemaphoreTake(s_stateLock, portMAX_DELAY);
       s_snap.vs = vs; s_snap.link = LINK_OK; s_snap.lastMs = millis(); s_snap.everOk = true;
       xSemaphoreGive(s_stateLock);
-      vTaskDelay(pdMS_TO_TICKS(30000));
+      sleepSupervised(30000);
     } else {
       err++;
       // Reactive re-CSRF (plan §4). If even CSRF fails, the API/network is down (OFFLINE);
@@ -92,7 +146,7 @@ static void pollTask(void*) {
       setLink(!re ? LINK_OFFLINE : (err >= 2 ? LINK_REAUTH : LINK_OK));
       uint32_t backoff = 30u << (err > 5 ? 5 : err);
       if (backoff > 900) backoff = 900;
-      vTaskDelay(pdMS_TO_TICKS(backoff * 1000));
+      if (sleepSupervised(backoff * 1000)) err = 0;   // link came back: retry now, not in 15 min
     }
   }
 }
@@ -216,6 +270,21 @@ static void handleStatus() {
   }
   // LED strip preview — the same 8-segment meter the physical strip shows, right below the table.
   body += "<div class=card><div class=k>LED strip</div>" + meterHtml(s, thresh) + "</div>";
+
+  // Health. The point of these four numbers is diagnosing the long-uptime failures this firmware
+  // now self-heals: a climbing reconnect count says the link really is flapping, and an uptime
+  // that keeps resetting says something is rebooting the box instead.
+  const uint32_t up = millis() / 1000;
+  String uptime = up < 3600 ? String(up / 60) + "m"
+                : up < 86400 ? String(up / 3600) + "h " + String((up % 3600) / 60) + "m"
+                             : String(up / 86400) + "d " + String((up % 86400) / 3600) + "h";
+  body += "<div class=card><div class=k>Health</div>";
+  body += row("Uptime", uptime);
+  body += row("WiFi", Net::ssid() + " &middot; " + String(WiFi.RSSI()) + " dBm");
+  body += row("Reconnects", String((unsigned)Net::reconnectCount()));
+  body += row("Free heap", String(ESP.getFreeHeap() / 1024) + " KB");
+  body += "</div>";
+
   body += pageFoot();
   s_server.send(200, "text/html", body);
 }

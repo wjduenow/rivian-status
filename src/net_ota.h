@@ -6,6 +6,7 @@
 #include <Arduino.h>
 
 void otaBegin();     // register ArduinoOTA as the device name; call after WiFi is connected
+void otaRestart();   // re-advertise after a WiFi reconnect (the responder dies with the link)
 void otaHandle();    // call frequently from loop()
 bool otaActive();    // true while an OTA push is in progress (for the LED phase)
 int  otaProgress();  // 0-100 during a push, else -1

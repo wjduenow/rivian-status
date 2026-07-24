@@ -82,10 +82,16 @@ cd hardware/status-light/<box|box-v2> && conda run -n img23d python build_all.py
   0/90/180/270 = where the plug exits, + `led_vert0` enclosure axis and `led_inv` — see plan §7;
   `ledFlipped()`/`ledVertical()` derive from all three via `pixel0Dir()`), device name
   (= hostname), WiFi creds.
-- `net_wifi.{h,cpp}` — connect (hostname before STA transition!), runtime creds, SoftAP portal.
-- `net_ota.{h,cpp}` — ArduinoOTA as `<device name>.local`.
+- `net_wifi.{h,cpp}` — connect (hostname before STA transition!), runtime creds, SoftAP portal,
+  `reconnect()` for the supervisor. Connect also persists compiled-in creds to NVS so a **CI
+  Release binary (no `secrets.h`) doesn't strand the unit in the setup portal**.
+- `net_ota.{h,cpp}` — ArduinoOTA as `<device name>.local`; `otaRestart()` re-advertises after a
+  WiFi reconnect (the responder dies with the netif — otherwise `.local` discovery stays broken).
 - `webserver.{h,cpp}` — WebServer:80 + the **FreeRTOS poll task** + shared snapshot (mutex-guarded);
-  exposes `ledState()` for the LED map.
+  exposes `ledState()` for the LED map. Hosts the **WiFi supervisor** (`sleepSupervised()`): all
+  poll sleeps run in 500 ms slices, re-kicking the link every 10 s while down and clearing the
+  backoff on recovery — without it the 900 s backoff cap leaves the light stale for 15 min after
+  the network returns. See plan §8 "Uptime hygiene".
 - `leds.{h,cpp}` — **Phase 6** 8-pixel WS2812 status map (§7) via FastLED on D10/GPIO9; reads
   `ledState()` + `otaActive()`; brightness-capped. Built into `phase3` only (stubs elsewhere). All
   Rivian enum reads (`sCharging`/`sPlugged`/`sFault`) are centralized here. `render()` always draws

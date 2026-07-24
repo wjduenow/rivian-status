@@ -45,9 +45,39 @@ bool Net::connect(uint32_t timeoutMs) {
   WiFi.persistent(false);
   WiFi.setHostname(hostname().c_str());
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);   // re-associate on transient drops without waiting for the supervisor
+  WiFi.setSleep(false);          // mains-powered always-on box: modem sleep invites AP-driven drops
   if (!beginFromStored()) return false;
-  return waitConnected(timeoutMs);
+  if (!waitConnected(timeoutMs)) return false;
+
+#if defined(WIFI_SSID) && defined(WIFI_PASS)
+  // If the compiled-in secrets.h creds are what connected (beginFromStored() prefers NVS, so an
+  // empty NVS ssid means the secrets.h branch won), persist them to NVS now. Otherwise a later
+  // flash of a *credential-less* build — every CI Release binary, which ships no secrets.h
+  // precisely so it can't leak WiFi — finds no creds and drops the device into the setup portal.
+  // That's the failure that stranded the nest on its first portal update (sonos-nest 37669fd).
+  // Note this makes NVS win over a later-edited secrets.h; the portal overwrites NVS to move the
+  // device to a different network.
+  if (Settings::wifiSsid().isEmpty()) {
+    Settings::setWifi(WIFI_SSID, WIFI_PASS);
+    Serial.println("[wifi] persisted compiled-in creds to NVS (survives a credential-less flash)");
+  }
+#endif
+  return true;
 }
+
+static uint32_t s_reconnects = 0;
+
+// See net_wifi.h. A plain WiFi.reconnect() can stay stuck after some disconnect reasons, so drop
+// the (already-dead) association and begin() afresh. disconnect() keeps the stored config, and
+// beginFromStored() re-reads creds anyway, so this also picks up a portal change.
+void Net::reconnect() {
+  s_reconnects++;
+  WiFi.disconnect();
+  beginFromStored();
+}
+
+uint32_t Net::reconnectCount() { return s_reconnects; }
 
 bool      Net::isConnected() { return WiFi.status() == WL_CONNECTED; }
 String    Net::ssid()        { return WiFi.SSID(); }

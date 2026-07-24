@@ -261,6 +261,11 @@ both are settings rather than assumptions:
 | `ledStickVertical0()` — is the stick vertical with the plug at the bottom? | `led_vert0` | **Differs per enclosure.** v2's wall case holds the stick vertically on the charger's portrait face; **v1's box mounts board-flat to the wall, LEDs facing out, so its stick runs horizontal** — plug-at-bottom there reads left→right. Default `false` (v1, the unit in service). |
 | `ledInverted()` — is the meter filling the wrong way? | `led_inv` | Which physical end **pixel 0** is depends on how that unit's stick was wired. Exposed as a "meter fills the wrong way — reverse it" checkbox: one glance at the device settles it, no guessing in firmware. |
 
+**Defaults confirmed on the real v1 unit** (photo in the root README): wall-mounted with the
+USB-C lead exiting the **bottom**, the meter fills **left→right** — 7 green + 1 white at 7/8 of
+target. That is exactly what `led_vert0=false, led_inv=false, led_rot=0` predicts, so the
+"pixel 0 is at the left end at the reference mounting" assumption is settled for v1, not assumed.
+
 *The math, all in `Settings`:* everything falls out of **`pixel0Dir()`** — where pixel 0 points
 once mounted, as clockwise degrees off screen-up. It starts at *down* (vertical stick) or *left*
 (horizontal), `+180` if inverted, `+ rotation` for the mounting. Then `ledVertical()` = pixel 0
@@ -341,10 +346,31 @@ mutex (mirrors sonos-nest's `stateLock()`), and set **explicit socket/TLS timeou
 stalled poll can't wedge the UI.
 
 **Uptime hygiene (24/7 appliance):**
-- **WiFi auto-reconnect** — the lifted `net_wifi` pattern must reconnect on drop and drive the
-  link-health LED; don't assume the connection survives for weeks.
-- **Task watchdog + heap floor** — monitor free heap and reboot on a floor breach; cheap
-  insurance against a slow TLS-stack leak over long uptime.
+- **WiFi supervisor — ✅ BUILT.** Ported from sonos-nest `f58573d`, which fixed an
+  "unresponsive after 2–3 days" report. Before this, `Net::connect()` ran **once at boot** and
+  nothing ever re-checked the link: a router reboot / DHCP renewal / AP roam left the box
+  alive-but-wedged with the web UI *and* OTA dead — unfixable without pulling the USB. Now:
+  - `Net::connect()` sets `setAutoReconnect(true)` + `setSleep(false)` (mains-powered box; modem
+    sleep invites AP-driven drops).
+  - `sleepSupervised()` in `webserver.cpp` replaces the poll task's blind `vTaskDelay`s: it
+    sleeps in 500 ms slices, re-kicks `Net::reconnect()` every 10 s while the link is down, and
+    **returns early on recovery so the backoff is cleared**. That last part is rivian-status
+    -specific — sonos-nest polls every 3 s with no backoff, whereas this task's backoff caps at
+    **900 s**, so a straight port would have left the light stale and red for up to 15 min after
+    the network returned.
+  - On recovery it **re-advertises mDNS + ArduinoOTA** (`readvertise()` / `otaRestart()`). Both
+    bind to the netif that died; without this a healed device is reachable by IP but invisible
+    to `.local`, which is exactly how the `/ota` skill discovers it.
+  - A **Health card** on the status page (uptime / SSID+RSSI / reconnect count / free heap) —
+    a climbing reconnect count says the link is really flapping; a resetting uptime says
+    something is rebooting the box instead.
+- **Credential survival — ✅ BUILT** (sonos-nest `37669fd`). `Net::connect()` persists
+  compiled-in `WIFI_SSID`/`WIFI_PASS` to NVS on a successful connect when NVS is empty.
+  Without it, a device that had only ever connected via `secrets.h` drops into the setup portal
+  the moment it's flashed with a **CI Release binary** (which ships no `secrets.h` by design).
+- **Task watchdog + heap floor** — still TODO. Monitor free heap and reboot on a floor breach;
+  cheap insurance against a slow TLS-stack leak over long uptime. The Health card now surfaces
+  the heap number this would act on.
 
 ---
 

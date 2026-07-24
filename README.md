@@ -22,6 +22,64 @@ a browser. It lives behind a 3D-printed enclosure and runs off USB-C.
 - Provisions WiFi via a **SoftAP captive portal** on first boot, and supports **wireless OTA**
   firmware updates after that. Only session tokens are stored (never your password).
 
+## Build one from scratch
+
+Start to finish on a brand-new board. The electronics and setup take about half an hour; the case
+print is a few hours on its own, so start that first if you're printing one.
+
+**1. Get the parts.** A [Seeed XIAO ESP32-S3](#parts), an 8-pixel WS2812 stick, a ~330 Ω resistor
+and a USB-C supply. Full list with links in [Parts](#parts).
+
+> ⚠️ **Plug the external U.FL antenna in.** The XIAO's WiFi is unusable without it, and the
+> failure looks exactly like a wrong WiFi password — this wastes an afternoon if you don't know it.
+
+**2. Print the case** and wire the stick to the board — [enclosure](#the-enclosure-case) and
+[wiring](#wiring). You can do this after step 3 if you'd rather see it running on the bench first.
+
+**3. Flash it the first time, over USB.** A new board needs a full flash — bootloader, partition
+table and app — so this first one is done from source with PlatformIO. Wireless updates take over
+afterwards.
+
+```bash
+pip install platformio                                    # if you don't have it
+git clone https://github.com/wjduenow/rivian-status && cd rivian-status
+pio run -e phase3 -t upload --upload-port /dev/ttyACM0    # or COMx / /dev/cu.usbmodem*
+```
+
+The board appears as a USB serial port when you plug it in (`303A:1001`). PlatformIO usually
+finds it on its own, so you can drop `--upload-port` and let it autodetect.
+
+You do **not** need to create `include/secrets.h` — it's optional, and leaving it out is the
+supported path. Everything (WiFi, Rivian login) is configured in the browser below.
+
+> **Why not just download the release binary?** The `firmware-status.bin` on the
+> [Releases page](https://github.com/wjduenow/rivian-status/releases) is the *application image
+> only*. A factory-fresh board also needs a bootloader at `0x0` and a partition table at `0x8000`,
+> which that asset doesn't contain — so it's the right file for *updating* a device that already
+> runs this firmware, not for the first flash. Build from source once and you never need a cable
+> again.
+
+**4. Join it to your WiFi.** On first boot it has no credentials, so it raises its own hotspot:
+
+- Join the open network **`rivian-status-setup`** from a phone or laptop.
+- A setup page opens (or browse to `http://192.168.4.1/`). Pick your network, enter the password,
+  optionally rename the device, and hit **Join**.
+- It reboots onto your WiFi. The hotspot disappears.
+
+**5. Sign in to Rivian.** Browse to **`http://rivian-status.local/`** (or its IP — check your
+router if `.local` doesn't resolve, which is common on Windows/WSL). Open **Login**, enter your
+Rivian email and password, then the MFA code that arrives **by email**. Only the session token is
+stored, never your password.
+
+**6. Done — it starts polling.** The meter comes alive within 30 seconds. On **Config**, set your
+[mounting orientation](#mounting-orientation) so the meter fills the right way for how you hung it,
+plus the low-range threshold and LED brightness. Turn on
+[automatic updates](#firmware-updates) and it keeps itself current from then on.
+
+**Troubleshooting the first boot:** if no hotspot appears, the board is probably already joined to
+a network (check your router) — or the antenna isn't connected. If the LEDs stay dark, re-check the
+data line on `D10` and that the stick's 5 V comes from the `5V` pin, not `3V3`.
+
 ## The LED indicator
 
 The **whole strip is one meter**, filled by **charge % ÷ your charge target** (so "full" = you
@@ -185,27 +243,39 @@ D10│ ●──[ ~330 Ω ]─────────────────�
 - Keep the LED-stick wires short; they solder to the stick's end pads and run down to the XIAO.
 - The external **U.FL antenna** must be connected or WiFi will fail (looks like a bad password).
 
-## Build, flash & first-time setup
+## Building & flashing (developer reference)
 
-Firmware is PlatformIO (Arduino framework). The shipped app is the **`phase3`** env.
+Setting one up for the first time? Use [Build one from scratch](#build-one-from-scratch) above —
+this section is the command reference behind it.
+
+Firmware is PlatformIO (Arduino framework). The shipped app is the **`phase3`** env; the others are
+diagnostic harnesses.
+
+| env | what it is |
+|---|---|
+| **`phase3`** | **the appliance** — web UI, poll task, WiFi provisioning, OTA, LEDs |
+| `phase3-ota` | same binary, uploaded wirelessly instead of over USB |
+| `phase1` / `phase2` | serial-only auth and poll-loop harnesses; these *require* `include/secrets.h` |
+| `phase6-ledtest` | standalone WS2812 wiring smoke-test on `D10` |
 
 ```bash
 pio run -e phase3                                        # build
-pio run -e phase3 -t upload --upload-port /dev/ttyACM0   # first flash over USB
+pio run -e phase3 -t upload --upload-port /dev/ttyACM0   # USB flash (bootloader + table + app)
 ```
-Then, over the air afterwards — packaged as the **`/ota`** skill:
+Over the air afterwards — packaged as the **`/ota`** skill:
 ```bash
 OTA_PASSWORD=<pw> pio run -e phase3-ota -t upload --upload-port <device-ip>
 ```
 
-**First boot:**
-1. The device starts a **WiFi setup hotspot** (SoftAP captive portal) — join it and enter your
-   WiFi.
-2. Browse to the device (`http://<device-ip>/` or `http://rivian-status.local/`), open **Login**,
-   and sign in with your Rivian email + password (+ the emailed MFA code). Only the session token
-   is stored.
-3. It begins polling automatically and the meter comes alive. Tune the **low-range threshold**,
-   **LED brightness**, and **device name** on **Config**.
+A full USB flash writes four images; PlatformIO handles the offsets for you
+(`0x0` bootloader, `0x8000` partition table, `0xe000` boot_app0, `0x10000` app). Only the last of
+those is what a Release publishes and what OTA replaces — which is why the first flash is the one
+that must come from a build.
+
+`include/secrets.h` is **optional** and gitignored (template: `include/secrets.h.example`). `phase3` builds
+fine without it — that's how release binaries are built, and it's what keeps the setup portal and
+browser login working. It's only needed for the phase1/phase2 serial harnesses, a compile-time WiFi
+fallback, or setting an OTA password.
 
 Full flash/serial/OTA details (incl. the WSL usbipd workflow) are in
 [`CLAUDE.md`](CLAUDE.md); the design rationale is in

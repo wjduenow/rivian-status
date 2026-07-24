@@ -4,8 +4,10 @@
 > released, carrying `firmware-status.bin` + `manifest.json` with a matching sha256, and the binary
 > reports a bare `fw v0.1.0` (proof of a clean tag build). Its first run failed on a latent
 > `cache: pip` bug in the workflow; see `21b0ec4`. Phase 2 (device-pull OTA) is implemented in
-> `src/net_updater.{h,cpp}` and live on the device. Phase 3 (LAN mirror) remains design-only and
-> is probably not worth building here.
+> `src/net_updater.{h,cpp}` and **verified end-to-end on hardware**: the unit pulled `v0.1.2` from
+> GitHub by itself and rebooted into it, reporting a bare `fw v0.1.2` (no `-dirty`), which only a
+> CI Release binary can produce — proof it is running the artifact it downloaded, not a laptop
+> build. Phase 3 (LAN mirror) remains design-only and is probably not worth building here.
 
 Ported from `sonos-nest`'s `plans/06-scalable-ota.md`, which is shipped and fleet-deployed. That
 plan's reasoning applies almost verbatim; this file records what's different for rivian-status and
@@ -144,6 +146,16 @@ page reports running version, availability, last error, and `esp_reset_reason()`
 (NVS `ota_auto`, **default false**). Checking and applying are separate: availability is always
 reported so the page can show it, but nothing self-flashes unless `otaAuto` is on or someone
 presses the button.
+
+### ⚠️ Redirects must be set TWICE (cost a release to find)
+
+`HTTPUpdate` builds its **own internal `HTTPClient`**, so
+`setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS)` on the manifest fetch does **not** carry over to
+the firmware download — it needs `httpUpdate.setFollowRedirects(...)` of its own. GitHub 302s a
+release asset to a signed CDN host, so without it the pull dies before transferring a byte with
+`flash failed (-104) Wrong HTTP Code`. That's exactly how the first live pull failed on `v0.1.1`;
+everything either side was already right (the device fetched the manifest, compared versions, and
+reported "v0.1.1 available"). Fixed in `v0.1.2`.
 
 **Ported verbatim, because they were real resets on sonos-nest hardware:**
 1. **Yield during the download.** `HTTPUpdate`'s loop never yields; unfixed it starves IDLE and the

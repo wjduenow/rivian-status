@@ -97,8 +97,9 @@ cover closes the skirt.
   [`hardware/status-light/box-v2/README.md`](hardware/status-light/box-v2/README.md).
 
 Every dimension and how to regenerate the STLs lives in each version's folder; the v1 bill of
-dimensions is in [`hardware/MEASUREMENTS.md`](hardware/MEASUREMENTS.md) and the board/spec
-provenance in [`hardware/status-light/board_spec.md`](hardware/status-light/board_spec.md).
+dimensions is in [`box/MEASUREMENTS.md`](hardware/status-light/box/MEASUREMENTS.md), the v2
+design notes in [`box-v2/NOTES.md`](hardware/status-light/box-v2/NOTES.md), and the shared
+board/spec provenance in [`hardware/status-light/board_spec.md`](hardware/status-light/board_spec.md).
 
 ## Wiring
 

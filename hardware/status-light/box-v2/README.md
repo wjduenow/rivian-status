@@ -15,6 +15,9 @@ Same toolchain as `../box` (trimesh CSG, mm, every number provenance-commented i
 `case_params.py`, clearances **ASSERTED** in `build_case.check_clearances()` so an illegal
 edit fails loudly instead of writing a broken STL).
 
+**Design decisions + rationale** (why it's ~29 mm deep, why hidden M3 forces that, the skirt /
+cover / lip choices): [`NOTES.md`](NOTES.md). The shared XIAO board spec is `../board_spec.md`.
+
 ## Parts (bill of materials)
 | # | part | notes |
 |---|---|---|

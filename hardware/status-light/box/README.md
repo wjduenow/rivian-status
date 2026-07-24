@@ -7,6 +7,7 @@ fully proud); the U.FL antenna coils **inside** for now (a front-wall exit slot 
 one-flag toggle, `ANT_EXIT`).
 
 **Outer size:** ~75.3 × 34.3 × 16.0 mm (recomputes from the params).
+**Every dimension, with provenance:** [`MEASUREMENTS.md`](MEASUREMENTS.md).
 
 ## Parts
 | File | What |

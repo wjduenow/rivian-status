@@ -1,10 +1,11 @@
-# MEASUREMENTS — every number the enclosure is built from
+# MEASUREMENTS — every number the v1 desk box is built from
 
-One place for all the dimensions in `hardware/`. Everything here is the single source of
-truth `status-light/box/case_params.py` reads from; this doc is the human-readable index.
+One place for all the dimensions in this `box/` (v1) enclosure. Everything here is the human-
+readable index for `case_params.py` (the single source of truth the builders read from).
+For the v2 wall-charger case, see `../box-v2/` (its numbers live in `box-v2/case_params.py`).
 Provenance tags:
 
-- **CAD** — read off Seeed's official STEP (`status-light/ref/XIAO-ESP32S3 v2.step`), measured in mm.
+- **CAD** — read off Seeed's official STEP (`../ref/XIAO-ESP32S3 v2.step`), measured in mm.
 - **MEAS** — calipered off the physical part by the user.
 - **SPEC** — datasheet / standard part.
 - **DERIVED** — computed from the above in `case_params.py` (not a free choice).
@@ -94,6 +95,6 @@ top; U.FL antenna coils inside; four M3 screws hold the lid.
 - **DIN end** orientation (`LED_DIN_AT_PLUS_X`) — cosmetic (shortest D0 wire run).
 - **Peg/boss/hole fits** print tight in FDM — run a test coupon.
 
-> To change any number: edit `status-light/box/case_params.py`, then
+> To change any number: edit `case_params.py` (in this folder), then
 > `conda run -n img23d python build_all.py`. `build_shell.py` asserts its own clearances,
 > so an illegal edit fails loudly instead of writing a broken STL.

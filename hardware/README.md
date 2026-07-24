@@ -6,7 +6,9 @@ project: a Python CSG toolchain (**trimesh + manifold3d**, not OpenSCAD), one sh
 `*_params.py` per part, `build_*.py` generators → `.stl`, and a `render_preview.py`. The
 toolchain lives in the `img23d` conda env (`conda run -n img23d python build_all.py`).
 
-**→ [MEASUREMENTS.md](MEASUREMENTS.md) — every dimension the enclosure is built from, in one table.**
+Per-version dimensions live in each case folder: **[status-light/box/MEASUREMENTS.md](status-light/box/MEASUREMENTS.md)**
+(v1, one table) and **[status-light/box-v2/](status-light/box-v2/)** (v2 — numbers in
+`case_params.py`, decisions in `NOTES.md`).
 
 | unit | board | enclosures |
 |------|-------|-----------|

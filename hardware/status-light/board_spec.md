@@ -1,9 +1,10 @@
-# XIAO ESP32-S3 — mechanical spec (as used by the enclosure)
+# XIAO ESP32-S3 — mechanical spec (as used by the enclosures)
 
-Every number the box relies on, and exactly where it came from. Same discipline as
+Every XIAO number the enclosures rely on, and exactly where it came from. Shared by **both**
+case versions — `box/` (v1) and `box-v2/` (v2). Same discipline as
 `../../../sonos-nest/hardware`: CAD-verified numbers are plain; anything estimated is
-flagged **⚠️VERIFY**. All values are already baked into `box/case_params.py` — this file
-is the paper trail.
+flagged **⚠️VERIFY**. Values are baked into each version's `case_params.py` — this file is
+the paper trail.
 
 ## Sources (Seeed official)
 

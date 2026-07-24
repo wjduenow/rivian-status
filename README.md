@@ -39,6 +39,26 @@ hit your set charge limit, e.g. 70 %, not 100 %):
 Brightness is adjustable on the config page. The status web page also shows a live **preview**
 of the strip below the data table.
 
+### Mounting orientation
+
+The light is a **meter**, and where you can hang it depends on where the power is — so which end
+reads as "the top" isn't fixed. The config page lets you say **where the plug comes out**
+(bottom / left / top / right, as four little diagrams), and the firmware rotates the meter to
+suit. The rule it keeps is:
+
+> the meter always fills toward the **top** when it ends up vertical, and toward the **right**
+> when it ends up sideways.
+
+So you can mount it whichever way the outlet allows and it still reads the same. Two extra
+settings pin it down completely:
+
+- **Enclosure** — v1's bar runs *across* the case, v2's runs *up-down*, so the same quarter turn
+  lands them on different axes. Set once per unit.
+- **"Meter fills the wrong way"** — which end of the LED stick is pixel 0 depends on how yours
+  was wired, so if the meter drains backwards, tick this and it's fixed.
+
+Changes apply on the next LED frame — no reboot.
+
 ## The web interface
 
 Everything is configured in a browser — no app. The device serves three pages (plus a WiFi
@@ -51,7 +71,8 @@ setup portal on first boot):
 - **Status** — live charge %, target, range, charger/plug state, and a preview of the LED strip.
 - **Login** — one-time Rivian sign-in (email + password, then the emailed MFA code); only the
   session token is stored, never the password.
-- **Config** — low-range alert threshold, LED brightness, and device name.
+- **Config** — low-range alert threshold, LED brightness, [mounting orientation](#mounting-orientation),
+  and device name.
 
 ## Parts
 
@@ -80,6 +101,10 @@ trimesh, regenerated in the `img23d` conda env). Pick one:
 ### v1 — desk box (`hardware/status-light/box/`)
 A "top-bar" box: the XIAO lies flat on the floor of the shell and the LED stick screws onto two
 posts **above** it, LEDs facing up through a window in the lid. USB-C exits the back wall.
+
+Despite the name it wall-mounts nicely too (above) — lay it flat against the wall with the lid
+facing out and the back-wall USB-C exit points straight down. That puts the LED bar horizontal;
+set **Enclosure = Box (v1)** and **plug = Bottom** on the config page and it reads left→right.
 
 - **Print these:** [`box/shell.stl`](hardware/status-light/box/shell.stl) +
   [`box/lid.stl`](hardware/status-light/box/lid.stl) — ~75 × 34 × 16 mm.

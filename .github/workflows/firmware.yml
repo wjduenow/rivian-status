@@ -50,10 +50,14 @@ jobs:
           fetch-tags: true
           persist-credentials: false   # git_version.py only reads local history; nothing pushes
 
+      # NB: no `cache: pip` here. setup-python builds its cache key by hashing a dependency file,
+      # and this repo has no requirements.txt / pyproject.toml — with the option set the step
+      # hard-fails ("No file matched to [**/requirements.txt or **/pyproject.toml]") before a line
+      # is compiled. The single `pip install platformio` below is not worth a lockfile anyway, and
+      # the expensive part (platform + framework + libs) is already cached one step down.
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
 
       # Cache the PlatformIO home: the pinned platform, the arduino framework, and the libs
       # (ArduinoJson, FastLED). Keyed on this file + platformio.ini so a dependency change busts

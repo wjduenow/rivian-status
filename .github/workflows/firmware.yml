@@ -26,8 +26,11 @@ concurrency:
   group: firmware-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: the default for every job is read-only. ONLY the release job is granted
+# contents: write (softprops/action-gh-release needs it to create the Release + upload assets) —
+# the build job compiles untrusted-ish dependency code and has no business holding a write token.
 permissions:
-  contents: write        # softprops/action-gh-release creates the Release + uploads assets
+  contents: read
 
 env:
   PLATFORM: espressif32@7.0.1   # keep in sync with the locally-installed platform
@@ -45,6 +48,7 @@ jobs:
         with:
           fetch-depth: 0         # tools/git_version.py runs `git describe --tags` for FW_VERSION
           fetch-tags: true
+          persist-credentials: false   # git_version.py only reads local history; nothing pushes
 
       - uses: actions/setup-python@v5
         with:
@@ -95,8 +99,12 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write             # create the Release + upload assets (action-gh-release)
     steps:
       - uses: actions/checkout@v4    # for tools/build_manifest.py
+        with:
+          persist-credentials: false # action-gh-release authenticates with github.token, not git
 
       - uses: actions/download-artifact@v4
         with:

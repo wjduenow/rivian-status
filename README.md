@@ -68,11 +68,38 @@ setup portal on first boot):
 |:---:|:---:|:---:|
 | [![Status page](docs/screenshots/status.png)](docs/screenshots/status.png) | [![Login page](docs/screenshots/login.png)](docs/screenshots/login.png) | [![Config page](docs/screenshots/config.png)](docs/screenshots/config.png) |
 
-- **Status** — live charge %, target, range, charger/plug state, and a preview of the LED strip.
+- **Status** — live charge %, target, range, charger/plug state, a preview of the LED strip, and a
+  **health** readout (uptime, signal, WiFi reconnects, free heap, last reset cause, firmware
+  version). The health numbers are what tell you whether a unit that's been up for weeks is
+  actually healthy or quietly flapping.
 - **Login** — one-time Rivian sign-in (email + password, then the emailed MFA code); only the
   session token is stored, never the password.
-- **Config** — low-range alert threshold, LED brightness, [mounting orientation](#mounting-orientation),
-  and device name.
+- **Config** — low-range alert threshold, LED brightness,
+  [mounting orientation](#mounting-orientation), device name, and
+  [firmware updates](#firmware-updates).
+
+## Firmware updates
+
+The device can update itself. It checks for a newer release at boot and every 6 hours, and either
+tells you one is available or installs it — your choice:
+
+- **Update source** — blank checks this repo's latest GitHub Release. Type `off` to never check, or
+  paste your own manifest URL.
+- **Install updates automatically** — off by default, so out of the box it reports an update but
+  waits for you to press **Check & update now**. Tick it and the device keeps itself current
+  unattended.
+
+It only ever installs a *strictly newer* version, so it can't flip-flop between builds or downgrade
+a hand-flashed development build. A failed or interrupted download leaves the running firmware
+untouched — the new image goes into a second flash slot and is only booted once it's complete. The
+LED strip shows a blue progress bar while it installs.
+
+> **Note:** release binaries are built without any secrets, which means they carry **no OTA
+> password** — the wireless-flash listener on such a unit is unauthenticated. Keep it on a trusted
+> network, or build and flash your own binary.
+
+You can still push firmware from a laptop over WiFi at any time (`espota`), which is what
+development builds use.
 
 ## Parts
 

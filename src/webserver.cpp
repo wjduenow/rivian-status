@@ -121,7 +121,17 @@ static String pageHead(const String& title, bool autorefresh) {
   h += "<nav><a href=/>Status</a><a href=/config>Config</a><a href=/login>Login</a></nav>";
   return h;
 }
-static String pageFoot() { return "</body></html>"; }
+// FW_VERSION comes from tools/git_version.py (`git describe --tags --always --dirty`). Only a
+// clean CI tag build reports a bare "v1.2.3"; anything flashed from a laptop carries a -dirty or
+// -N-g<hash> suffix. Fallback keeps the page compiling if the pre-script ever doesn't run.
+#ifndef FW_VERSION
+#define FW_VERSION "unknown"
+#endif
+
+static String pageFoot() {
+  return "<p class=k style='font-size:.8rem;text-align:center'>fw " FW_VERSION "</p>"
+         "</body></html>";
+}
 
 static String row(const String& k, const String& v) {
   return "<div class=row><span class=k>" + k + "</span><span>" + v + "</span></div>";

@@ -1,0 +1,126 @@
+# Build the shipping firmware and publish a GitHub Release.
+#
+# See plans/02-remote-builds-ota.md § Phase 1. A `v*` tag builds every app env and publishes a
+# Release with one firmware-<unit>.bin each plus a manifest.json (a later device/pull path would
+# consume that manifest). `workflow_dispatch` builds the same matrix and uploads artifacts only —
+# no Release — so CI itself can be exercised off a branch.
+#
+# Only the SHIPPING env is built. phase1/phase2 are serial-only diagnostic harnesses that
+# `#error` without include/secrets.h by design, and phase6-ledtest is a wiring smoke-test —
+# none of them are things anyone should ever flash from a Release.
+#
+# Reproducibility: platformio.ini leaves `platform = espressif32` UNPINNED, so a fresh install
+# would drift to the latest platform. This workflow pins the platform to the version the repo is
+# developed against (see PLATFORM below) by pre-installing it; PlatformIO then resolves the
+# unpinned requirement to the already-installed match instead of fetching latest. If you bump the
+# platform locally, bump PLATFORM here to match.
+name: firmware
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: {}
+
+# A newer tag/run supersedes an in-flight one for the same ref.
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the default for every job is read-only. ONLY the release job is granted
+# contents: write (softprops/action-gh-release needs it to create the Release + upload assets) —
+# the build job compiles untrusted-ish dependency code and has no business holding a write token.
+permissions:
+  contents: read
+
+env:
+  PLATFORM: espressif32@7.0.1   # keep in sync with the locally-installed platform
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false           # one unit failing shouldn't hide the others' results
+      matrix:
+        include:
+          - { env: phase3, unit: status }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0         # tools/git_version.py runs `git describe --tags` for FW_VERSION
+          fetch-tags: true
+          persist-credentials: false   # git_version.py only reads local history; nothing pushes
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      # Cache the PlatformIO home: the pinned platform, the arduino framework, and the libs
+      # (ArduinoJson, FastLED). Keyed on this file + platformio.ini so a dependency change busts
+      # it. First run is cold (~several min); later runs are fast.
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ env.PLATFORM }}-${{ hashFiles('platformio.ini', '.github/workflows/firmware.yml') }}
+          restore-keys: pio-${{ runner.os }}-${{ env.PLATFORM }}-
+
+      - run: pip install platformio
+
+      # Pin the platform so the unpinned `platform = espressif32` resolves to it (see header note).
+      - name: Pin espressif32 platform
+        run: pio pkg install -g -p "${PLATFORM}"
+
+      # NB: DELIBERATELY no include/secrets.h. Every include site is `#if __has_include`-guarded,
+      # WIFI_SSID/WIFI_PASS are `#if defined`-guarded (net_wifi.cpp), SEED_USESS is `#ifdef`-guarded
+      # and the RIVIAN_EMAIL/PASSWORD login path is compiled out of phase3 (main.cpp). So the build
+      # is clean without it — and crucially it bakes NO WiFi creds and NO Rivian session, so a
+      # Release binary still first-boot provisions via the SoftAP portal and still requires a
+      # browser login. Copying secrets.h.example would hardcode "your-ssid" and DISABLE the portal
+      # on every shipped unit. Do not add one.
+      #
+      # Consequence to know: a Release build has no OTA_PASSWORD, so net_ota.cpp emits its
+      # "OTA is unauthenticated" #warning and the espota listener comes up passwordless. Keep such
+      # a unit on a trusted LAN (plan §11), or flash a locally-built binary for one that isn't.
+
+      - name: Build ${{ matrix.env }}
+        run: pio run -e ${{ matrix.env }}
+
+      - name: Stage binary
+        run: cp ".pio/build/${{ matrix.env }}/firmware.bin" "firmware-${{ matrix.unit }}.bin"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.unit }}
+          path: firmware-${{ matrix.unit }}.bin
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write             # create the Release + upload assets (action-gh-release)
+    steps:
+      - uses: actions/checkout@v4    # for tools/build_manifest.py
+        with:
+          persist-credentials: false # action-gh-release authenticates with github.token, not git
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: bins
+          pattern: firmware-*
+          merge-multiple: true       # -> bins/firmware-status.bin, ...
+
+      - name: Build manifest.json
+        run: |
+          BASE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+          python3 tools/build_manifest.py "${GITHUB_REF_NAME}" "${BASE}" bins > bins/manifest.json
+          echo "---- manifest.json ----"; cat bins/manifest.json
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bins/firmware-*.bin
+            bins/manifest.json
+          generate_release_notes: true

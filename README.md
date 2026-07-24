@@ -99,8 +99,18 @@ There are **two case versions** — both drive the same board and are parametric
 trimesh, regenerated in the `img23d` conda env). Pick one:
 
 ### v1 — desk box (`hardware/status-light/box/`)
+
+[![The v1 enclosure, wall-mounted and running](docs/enclosure-v1.jpg)](docs/enclosure-v1.jpg)
+
+*A built v1 unit on the wall, live: 7 green + 1 white = one cell short of the charge target.
+The plug exits the bottom, so the meter fills left→right.*
+
 A "top-bar" box: the XIAO lies flat on the floor of the shell and the LED stick screws onto two
 posts **above** it, LEDs facing up through a window in the lid. USB-C exits the back wall.
+
+Despite the name it wall-mounts nicely too (above) — lay it flat against the wall with the lid
+facing out and the back-wall USB-C exit points straight down. That puts the LED bar horizontal;
+set **Enclosure = Box (v1)** and **plug = Bottom** on the config page and it reads left→right.
 
 Despite the name it wall-mounts nicely too (above) — lay it flat against the wall with the lid
 facing out and the back-wall USB-C exit points straight down. That puts the LED bar horizontal;

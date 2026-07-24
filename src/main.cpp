@@ -37,11 +37,13 @@ static void rule(const char* label) {
   Serial.printf("\n========== %s ==========\n", label);
 }
 
+#if defined(PHASE1_SMOKE_TEST) || defined(PHASE2_POLL_LOOP)
 static void printRaw() {
   Serial.println("--- raw response ---");
   Serial.println(RivianApi::lastRaw());
   Serial.println("--------------------");
 }
+#endif
 
 // Halt: park the CPU so a one-shot test doesn't loop.
 static void halt(const char* why) {
@@ -79,6 +81,7 @@ static bool syncTime() {
   return true;
 }
 
+#if defined(PHASE1_SMOKE_TEST) || defined(PHASE2_POLL_LOOP)
 // Blocking read of one line from serial (for the MFA OTP). Echoes as typed.
 static String readSerialLine(const char* prompt) {
   Serial.print(prompt);
@@ -95,6 +98,7 @@ static String readSerialLine(const char* prompt) {
   line.trim();
   return line;
 }
+#endif  // PHASE1_SMOKE_TEST || PHASE2_POLL_LOOP
 
 // Settings + WiFi + NTP + API init. `provision`: on WiFi failure, raise the SoftAP captive portal
 // (the appliance) instead of halting (dev serial tests). Settings load first — the DHCP hostname
@@ -123,8 +127,12 @@ static void bringUpNetwork(bool provision) {
   Serial.printf("persisted session present: %s\n", RivianApi::hasSession() ? "yes" : "no");
 }
 
-// Full auth handshake: CSRF -> Login -> (OTP over serial if MFA) -> getUserInfo. Shared by both
-// phases. `verbose` dumps raw responses (Phase 1 wants them). Returns true once the VIN is cached.
+// Full auth handshake: CSRF -> Login -> (OTP over serial if MFA) -> getUserInfo. Shared by the two
+// serial harnesses only — Phase 3 logs in from the browser (webserver.cpp), so this is compiled
+// out there. That matters for CI: it's the only code that reads RIVIAN_EMAIL/RIVIAN_PASSWORD, and
+// a Release build of phase3 is made with NO include/secrets.h at all (see .github/workflows/).
+// `verbose` dumps raw responses (Phase 1 wants them). Returns true once the VIN is cached.
+#if defined(PHASE1_SMOKE_TEST) || defined(PHASE2_POLL_LOOP)
 static bool authenticate(bool verbose) {
   // Fast path (plan §4): if a u-sess was persisted from a prior run, reuse it — mint a fresh CSRF
   // (which yields a new a-sess) and prove the session with getUserInfo. No login, no MFA/OTP.
@@ -177,6 +185,7 @@ static bool authenticate(bool verbose) {
   Serial.printf(">>>   #define SEED_USESS \"%s\"\n", RivianApi::userSession().c_str());
   return true;
 }
+#endif  // PHASE1_SMOKE_TEST || PHASE2_POLL_LOOP
 
 // ===========================================================================
 // PHASE 1 — one-shot smoke test

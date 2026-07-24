@@ -135,6 +135,30 @@ void Settings::setDeviceName(const String& name) {
   p.end();
 }
 
+// Pull-OTA settings live in NVS like the rest, but are read rarely (a 6 h check), so they open
+// the namespace on demand rather than caching — same shape as the WiFi creds below.
+String Settings::updateUrl() {
+  Preferences p; p.begin(NS, true);
+  String s = p.getString("upd_url", "");
+  p.end(); return s;
+}
+void Settings::setUpdateUrl(const String& url) {
+  String u = url; u.trim();
+  Preferences p; p.begin(NS, false);
+  p.putString("upd_url", u);
+  p.end();
+}
+bool Settings::otaAuto() {
+  Preferences p; p.begin(NS, true);
+  bool b = p.getBool("ota_auto", false);
+  p.end(); return b;
+}
+void Settings::setOtaAuto(bool on) {
+  Preferences p; p.begin(NS, false);
+  p.putBool("ota_auto", on);
+  p.end();
+}
+
 String Settings::wifiSsid() {
   Preferences p; p.begin(NS, true);
   String s = p.getString("wifi_ssid", "");

@@ -87,6 +87,11 @@ cd hardware/status-light/<box|box-v2> && conda run -n img23d python build_all.py
   Release binary (no `secrets.h`) doesn't strand the unit in the setup portal**.
 - `net_ota.{h,cpp}` — ArduinoOTA as `<device name>.local`; `otaRestart()` re-advertises after a
   WiFi reconnect (the responder dies with the netif — otherwise `.local` discovery stays broken).
+- `net_updater.{h,cpp}` — **pull-OTA** (plan 02 §2): GETs `manifest.json`, and if a *strictly
+  newer* build is published, self-flashes via `HTTPUpdate` into the spare OTA slot. Checked at boot
+  + every 6 h from the poll task; applies only with `otaAuto` or the `/config` button. **Don't
+  touch `parseVer()`'s field-terminator check** — without it a bare-hash `FW_VERSION` parses as a
+  huge version and the device never updates (see plan 02).
 - `webserver.{h,cpp}` — WebServer:80 + the **FreeRTOS poll task** + shared snapshot (mutex-guarded);
   exposes `ledState()` for the LED map. Hosts the **WiFi supervisor** (`sleepSupervised()`): all
   poll sleeps run in 500 ms slices, re-kicking the link every 10 s while down and clearing the

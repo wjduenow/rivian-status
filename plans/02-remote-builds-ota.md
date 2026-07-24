@@ -1,12 +1,11 @@
 # Remote builds → scalable OTA
 
-> **Status (2026-07-23): Phase 1 built, not yet exercised on GitHub.** `.github/workflows/firmware.yml`
-> + `tools/git_version.py` + `tools/build_manifest.py` exist and are verified locally (a
-> secrets-less `pio run -e phase3` compiles clean; `build_manifest.py` emits a valid manifest for
-> the real binary). Remaining for Phase 1: push the branch, run `workflow_dispatch` green, then tag
-> `v0.1.0` and confirm the Release carries `firmware-status.bin` + `manifest.json`, and flash that
-> Release binary via espota as the hardware pass. Phases 2 and 3 are **design only** — nothing
-> device-side has changed.
+> **Status (2026-07-24): Phases 1 and 2 BUILT.** Phase 1 is exercised and green — `v0.1.0` is
+> released, carrying `firmware-status.bin` + `manifest.json` with a matching sha256, and the binary
+> reports a bare `fw v0.1.0` (proof of a clean tag build). Its first run failed on a latent
+> `cache: pip` bug in the workflow; see `21b0ec4`. Phase 2 (device-pull OTA) is implemented in
+> `src/net_updater.{h,cpp}` and live on the device. Phase 3 (LAN mirror) remains design-only and
+> is probably not worth building here.
 
 Ported from `sonos-nest`'s `plans/06-scalable-ota.md`, which is shipped and fleet-deployed. That
 plan's reasoning applies almost verbatim; this file records what's different for rivian-status and
@@ -128,28 +127,53 @@ What that buys, and what it costs:
   the fix is to move the OTA password into NVS/`settings` alongside the WiFi creds rather than to
   inject a secret into CI.
 
-## Phase 2 — device-pull OTA (DESIGN ONLY, not built)
+## Phase 2 — device-pull OTA — BUILT
 
-Add `updateUrl` (manifest URL, empty by default) + `otaAuto` (bool) to `settings`/`/config`; a task
-periodically GETs the manifest, string-compares `version` against `FW_VERSION`, and either
-self-applies (`otaAuto`) or waits for an Approve click. `HTTPUpdate` ships with the Arduino core,
-so no new dependency. Empty `updateUrl` = today's espota-only behavior, so this is purely additive.
+`src/net_updater.{h,cpp}` (~210 lines, ported from sonos-nest `src/core/net/updater.cpp`).
+`HTTPUpdate` ships with the Arduino core, so **no new dependency**; the build grew ~19 KB
+(30.7 % → 31.3 % of the app slot).
 
-Two things to port verbatim from sonos-nest's hardware pass, because they were real resets, not
-theory:
+**Wiring:** `updaterBegin()` from `setup()` (one check at boot) and `updaterTick()` from the poll
+task (self-rate-limited to 6 h). It lives in the poll task deliberately — being there means the
+Rivian poll is inherently stopped for the duration of a download, so a flash can't race the shared
+TLS client. `/config` gets a Firmware card (source, auto toggle, "Check & update now"); the status
+page reports running version, availability, last error, and `esp_reset_reason()`.
 
-1. **Yield during the download.** `HTTPUpdate`'s loop never yields; on sonos-nest that starved
-   IDLE0 and the task WDT fired ~5 s in. Fix was a `delay(1)` per chunk in `onProgress`. Here the
-   `ledsLoop()`/`webAppLoop()` cadence in `loop()` makes this equally likely.
-2. **Quiesce other work while flashing.** An `updaterActive()` flag needs to gate the poll task
-   (and probably the LED render) the way `otaActive()` already gates things for espota.
+**Settings:** `updateUrl` (NVS `upd_url`; empty = AUTO → the compiled-in GitHub
+`releases/latest/download/manifest.json`, the literal `off` = never check) and `otaAuto`
+(NVS `ota_auto`, **default false**). Checking and applying are separate: availability is always
+reported so the page can show it, but nothing self-flashes unless `otaAuto` is on or someone
+presses the button.
 
-Also port `esp_reset_reason()` into the status page — on sonos-nest that's what made a mid-download
-reset diagnosable without serial.
+**Ported verbatim, because they were real resets on sonos-nest hardware:**
+1. **Yield during the download.** `HTTPUpdate`'s loop never yields; unfixed it starves IDLE and the
+   task WDT resets the device mid-transfer. `delay(1)` per progress chunk. Doubly needed here —
+   the poll task shares core 1 with `loop()`, so a non-yielding download also freezes
+   `ledsLoop()`/`webAppLoop()`.
+2. **Quiesce before flash writes.** `s_active` + a 400 ms beat before erasing, and `loop()` skips
+   `otaHandle()` while it's set (two writers to the OTA slots is the one way to brick this).
 
-Version comparison must be **strictly newer**, not "different" — sonos-nest shipped `v0.1.3`
-specifically to kill a downgrade loop where `otaAuto` plus a lagging mirror flip-flopped a device
-between two builds.
+**Divergence from sonos-nest, deliberate:** sonos-nest auto-applies only at BOOT so it can never
+yank firmware out from under a playing sleep-machine. This unit has nothing to interrupt and can
+run for months without rebooting, so boot-only would mean auto-update almost never fires — here an
+`otaAuto` device also applies on the periodic check.
+
+**Free win:** the LED strip's existing blue OTA progress bar now also renders pull-flash progress
+(`updaterActive()`/`updaterProgress()` feed the same branch) — visible only because of the yield above.
+
+### ⚠️ A real bug found in the ported version-compare (fixed here, still present upstream)
+
+Comparison is **strictly newer**, never "different" — sonos-nest shipped a release specifically to
+kill a downgrade loop. Its `parseVer()` accepts any string starting with a digit, which is wrong:
+`git describe` emits a **bare commit hash** before a repo's first tag, hashes are hex, so ~10 in 16
+start with a digit. `2591c5d-dirty` — the build that was on this device — parsed as version
+**2591.0.0** and outranked every real release, so the device would have reported "up to date"
+forever and never updated. sonos-nest never hit it only because it had tags from the start.
+
+Fixed by requiring each numeric field to end at `.`, `-`, or end-of-string, and requiring at least
+`major.minor`. Verified by compiling the real `parseVer`/`isNewer` natively against 15 cases
+(same-version, downgrade refusal, post-tag dev builds sorting newer than their tag, `0.10 > 0.9`
+numerically, and all four hash shapes). **Worth back-porting to sonos-nest.**
 
 ## Phase 3 — LAN mirror (DESIGN ONLY, likely NOT worth it here)
 

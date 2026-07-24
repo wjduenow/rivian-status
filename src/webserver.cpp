@@ -9,6 +9,8 @@
 #include "settings.h"
 #include "net_wifi.h"
 #include "net_ota.h"
+#include "net_updater.h"
+#include <esp_system.h>
 
 // --- Link health (drives the status page and, later, the link-health LED) ------------------
 enum { LINK_OK = 0, LINK_REAUTH = 1, LINK_OFFLINE = 2 };
@@ -125,6 +127,11 @@ static void pollTask(void*) {
       if (!ok) { setLink(LINK_OFFLINE); vTaskDelay(pdMS_TO_TICKS(5000)); continue; }
     }
 
+    // Pull-OTA check. Self-rate-limited to ~6 h, so calling it every pass is free. It runs here
+    // rather than in loop() because a flash must not race the Rivian TLS client — being in this
+    // task means polling is inherently stopped for the duration of a download.
+    updaterTick();
+
     VehicleStatus vs;
     API_LOCK();
     bool ok = RivianApi::pollState(vs);
@@ -196,6 +203,23 @@ static String pageFoot() {
 
 static String row(const String& k, const String& v) {
   return "<div class=row><span class=k>" + k + "</span><span>" + v + "</span></div>";
+}
+
+// Human-readable reboot cause. TASK_WDT in particular is the fingerprint of a starved download
+// (see net_updater applyNow()), so it earns a name rather than a number.
+static const char* resetReasonName() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:  return "power-on";
+    case ESP_RST_SW:       return "software";       // ESP.restart() — e.g. after an OTA
+    case ESP_RST_PANIC:    return "panic";
+    case ESP_RST_INT_WDT:  return "interrupt WDT";
+    case ESP_RST_TASK_WDT: return "task WDT";
+    case ESP_RST_WDT:      return "other WDT";
+    case ESP_RST_BROWNOUT: return "brownout";
+    case ESP_RST_DEEPSLEEP:return "deep sleep";
+    case ESP_RST_EXT:      return "external";
+    default:               return "unknown";
+  }
 }
 
 // An 8-segment preview of what the LED strip is showing (mirrors leds.cpp render()).
@@ -283,6 +307,16 @@ static void handleStatus() {
   body += row("WiFi", Net::ssid() + " &middot; " + String(WiFi.RSSI()) + " dBm");
   body += row("Reconnects", String((unsigned)Net::reconnectCount()));
   body += row("Free heap", String(ESP.getFreeHeap() / 1024) + " KB");
+  // Why we last rebooted. Ported from sonos-nest's hardware pass: a mid-download reset is
+  // otherwise undiagnosable without a serial cable, and TASK_WDT vs BROWNOUT vs SW point at
+  // completely different causes.
+  body += row("Last reset", resetReasonName());
+  body += row("Firmware", String(FW_VERSION));
+  if (updaterAvailable())
+    body += row("Update", "<span class='pill warn'>" + updaterAvailableVersion() +
+                          " available</span> <a href=/config>update</a>");
+  if (updaterLastError().length())
+    body += row("Update error", updaterLastError());
   body += "</div>";
 
   body += pageFoot();
@@ -439,10 +473,49 @@ static void handleConfigGet(const String& msg = "") {
   b += "<p class=k>Device name</p>"
        "<input name=name maxlength=32 value='" + Settings::deviceName() + "'>"
        "<button type=submit>Save</button></form>";
+
+  // --- Firmware updates (plan 02 § Phase 2) -----------------------------------------------
+  // Its own form so "Update now" can't be confused with saving the settings above.
+  b += "</div><div class=card><h1>Firmware</h1>";
+  b += row("Running", String(FW_VERSION));
+  b += row("Source", String(updaterSourceKind()));
+  if (updaterAvailable()) b += row("Available", "<span class='pill warn'>" + updaterAvailableVersion() + "</span>");
+  if (updaterLastError().length()) b += row("Last error", updaterLastError());
+  b += "<form method=POST action=/config>"
+       "<p class=k>Update source</p>"
+       "<input name=updateurl placeholder='(blank = GitHub releases)' value='" + Settings::updateUrl() + "'>"
+       "<p class=k style='font-size:.8rem'>Blank checks this repo's latest GitHub Release. "
+       "Type <b>off</b> to never check, or paste a manifest URL of your own.</p>"
+       "<p class=k><label style='color:#9a9a9a'><input type=checkbox name=otaauto value=1"
+       + String(Settings::otaAuto() ? " checked" : "") +
+       " style='width:auto;margin-right:.4rem;accent-color:#3a7'>Install updates automatically"
+       "</label></p>"
+       "<p class=k style='font-size:.8rem'>Off by default — the device tells you an update exists "
+       "but won't reflash itself unless you tick this or press the button below. Checks run every "
+       "6 hours. Note a Release build carries no OTA password, so its espota listener is open — "
+       "keep it on a trusted LAN.</p>"
+       "<button type=submit name=updatenow value=1>Check &amp; update now</button>"
+       "</form>";
   b += "</div>" + pageFoot();
   s_server.send(200, "text/html", b);
 }
 static void handleConfigPost() {
+  // Firmware form: separate from the settings form above, so detect it by its own field. The
+  // apply itself is armed here and happens on the poll task's next pass — flashing from inside a
+  // web handler would kill the connection serving this very page and blocks loop().
+  if (s_server.hasArg("updateurl") || s_server.hasArg("updatenow")) {
+    Settings::setUpdateUrl(s_server.arg("updateurl"));
+    Settings::setOtaAuto(s_server.hasArg("otaauto"));
+    if (s_server.hasArg("updatenow")) {
+      updaterApprove();
+      handleConfigGet("Checking for updates — if one is published the device will flash and reboot.");
+    } else {
+      updaterForceCheck();          // source changed: re-check promptly rather than in 6 h
+      handleConfigGet("Saved.");
+    }
+    return;
+  }
+
   if (s_server.hasArg("threshold")) Settings::setRangeThresholdMiles(s_server.arg("threshold").toInt());
   if (s_server.hasArg("brightness")) Settings::setLedBrightness(s_server.arg("brightness").toInt());
   // Takes effect on the next LED frame (~20 ms) — no reboot, same as brightness. The radios always

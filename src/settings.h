@@ -51,6 +51,14 @@ void   setDeviceName(const String& name);  // sanitized to DNS-safe, then persis
 // no leading/trailing hyphen. "" if nothing usable survives. (Borrowed from sonos-nest.)
 String sanitizeHostname(const String& raw);
 
+// Pull-OTA (plan 02 § Phase 2, implemented in net_updater). Checking and applying are separate:
+// availability is always reported, but nothing self-flashes unless otaAuto is on or someone
+// clicks "Update now".
+String updateUrl();                        // "" = AUTO (compiled-in GitHub latest), "off" = never
+void   setUpdateUrl(const String& url);    // trimmed; persisted
+bool   otaAuto();                          // self-apply a newer build? default FALSE — flashing
+void   setOtaAuto(bool on);                // yourself unattended should be opted into, not assumed
+
 // WiFi credentials (NVS). Empty ssid = never provisioned on-device (fall back to secrets.h).
 String wifiSsid();
 String wifiPass();

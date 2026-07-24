@@ -18,6 +18,7 @@
 #include "webserver.h"
 #include "net_wifi.h"
 #include "net_ota.h"
+#include "net_updater.h"
 #include "leds.h"
 
 #if __has_include("secrets.h")
@@ -325,6 +326,7 @@ void setup() {
   bringUpNetwork(/*provision=*/true);      // Settings + WiFi (portal fallback) + NTP + RivianApi
   webAppBegin();                           // mDNS + HTTP server + poll task (reuses u-sess)
   otaBegin();                              // ArduinoOTA as <device name>.local
+  updaterBegin();                          // one pull-OTA check (plan 02 §2); may flash + reboot
   ledsBegin();                             // 8-pixel WS2812 status map on D10/GPIO9 (§7)
 
   Serial.printf("Web UI: http://%s/  (or http://%s.local/)\n",
@@ -337,7 +339,9 @@ void setup() {
 
 void loop() {
   webAppLoop();
-  otaHandle();                             // service wireless firmware pushes
+  // Don't service espota pushes while a pull-flash is writing — two writers to the OTA slots at
+  // once is the one way to brick this. ledsLoop() still runs, so the strip shows the blue bar.
+  if (!updaterActive()) otaHandle();
   ledsLoop();                              // re-render the status pixels (~50 Hz, self-limited)
   delay(2);
 }

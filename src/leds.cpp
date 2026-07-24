@@ -20,6 +20,7 @@
 #include "webserver.h"
 #include "settings.h"
 #include "net_ota.h"
+#include "net_updater.h"
 
 #ifndef LED_DATA_PIN
 #define LED_DATA_PIN 9          // D10 = GPIO9 on the XIAO ESP32-S3
@@ -54,9 +55,12 @@ static void render() {
   const uint32_t now = millis();
   fill_solid(leds, LED_COUNT, CRGB::Black);
 
-  // OTA push takes over the whole strip: a blue progress bar with a moving highlight.
-  if (otaActive()) {
-    int p = otaProgress();                              // 0..100, or -1 if unknown
+  // A firmware update takes over the whole strip: a blue progress bar with a moving highlight.
+  // Both directions share it — espota push (net_ota) and pull-OTA (net_updater) — since from the
+  // strip's point of view they're the same event. The pull path only gets to render this because
+  // its download yields per chunk; see net_updater applyNow().
+  if (otaActive() || updaterActive()) {
+    int p = otaActive() ? otaProgress() : updaterProgress();   // 0..100, or -1 if unknown
     int lit = (p < 0) ? LED_COUNT : (p * LED_COUNT + 50) / 100;
     for (int i = 0; i < LED_COUNT; i++) leds[i] = (i < lit) ? CRGB(0, 0, 180) : CRGB(0, 0, 12);
     leds[(now / 120) % LED_COUNT] += CRGB(0, 0, 60);

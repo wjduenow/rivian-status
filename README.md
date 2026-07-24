@@ -62,7 +62,9 @@ setup portal on first boot):
 | **~330 Ω resistor** | series resistor on the LED data line (¼ W, 220–470 Ω all fine) | any |
 | **2× M3 × 6 screws** | mount the LED stick to its posts (Ø3.75 holes) | self-tapping / thread-forming M3 |
 | **4× M3 × 8 screws** | fasten the lid (countersunk) | self-tapping M3 |
-| **USB-C cable + 5 V supply** | permanent power (the strip is powered from USB VBUS) | any |
+| *(v1)* **USB-C cable + 5 V supply** | permanent power (the strip is powered from USB VBUS) | any |
+| *(v2)* **Nekmit Ultra-Thin flat USB-C wall charger** | v2 only — the case press-fits over it and it powers the XIAO over USB-C (via a USB-A→USB-C pigtail). 43.18 × 50.80 × 20.32 mm — the cavity is sized to it. | Nekmit Ultra-Thin flat charger (or any ~43 × 51 × 20 mm flat wall charger) |
+| *(v2)* **USB-A → USB-C low-profile pigtail** | v2 only — charger's bottom port → XIAO USB-C, coiled in the skirt | right-angle / 180° ribbon |
 | **3D-printed case** | **two versions** — v1 desk box (shell + lid) or v2 wall-charger slip case (case + cover) — see below | print it yourself |
 | *(optional)* 470–1000 µF cap | across the strip's 5V↔GND if pixel 0 flickers on power-up | any |
 

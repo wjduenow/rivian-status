@@ -63,7 +63,7 @@ setup portal on first boot):
 | **2× M3 × 6 screws** | mount the LED stick to its posts (Ø3.75 holes) | self-tapping / thread-forming M3 |
 | **4× M3 × 8 screws** | fasten the lid (countersunk) | self-tapping M3 |
 | **USB-C cable + 5 V supply** | permanent power (the strip is powered from USB VBUS) | any |
-| **3D-printed case** | shell + lid, ~75 × 34 × 16 mm — see below | print it yourself |
+| **3D-printed case** | **two versions** — v1 desk box (shell + lid) or v2 wall-charger slip case (case + cover) — see below | print it yourself |
 | *(optional)* 470–1000 µF cap | across the strip's 5V↔GND if pixel 0 flickers on power-up | any |
 
 > **Battery note:** as wired, the strip only has power over **USB** (its 5 V comes from the
@@ -72,17 +72,33 @@ setup portal on first boot):
 
 ## The enclosure (case)
 
+There are **two case versions** — both drive the same board and are parametric (Python +
+trimesh, regenerated in the `img23d` conda env). Pick one:
+
+### v1 — desk box (`hardware/status-light/box/`)
 A "top-bar" box: the XIAO lies flat on the floor of the shell and the LED stick screws onto two
 posts **above** it, LEDs facing up through a window in the lid. USB-C exits the back wall.
 
-- **Print these:** [`hardware/status-light/box/shell.stl`](hardware/status-light/box/shell.stl)
-  and [`hardware/status-light/box/lid.stl`](hardware/status-light/box/lid.stl)
-- **Print in a translucent/natural filament** for the lid (the LEDs glow through the window), or
-  back the window slot with a strip of diffusion film.
-- The case is **parametric** (Python + trimesh) — every dimension and how to regenerate the STLs
-  is in [`hardware/status-light/box/`](hardware/status-light/box/), the full bill of dimensions
-  in [`hardware/MEASUREMENTS.md`](hardware/MEASUREMENTS.md), and the board/spec provenance in
-  [`hardware/status-light/board_spec.md`](hardware/status-light/board_spec.md).
+- **Print these:** [`box/shell.stl`](hardware/status-light/box/shell.stl) +
+  [`box/lid.stl`](hardware/status-light/box/lid.stl) — ~75 × 34 × 16 mm.
+- Print the lid in **translucent/natural filament** (the LEDs glow through the window), or back
+  the window slot with a strip of diffusion film.
+
+### v2 — wall-charger slip case (`hardware/status-light/box-v2/`)
+A one-piece shell that **press-fits over a Nekmit Ultra-Thin flat USB wall charger** — the
+charger is the mechanical *and* power anchor. It plugs into the wall, its AC prongs exit the
+**open back**, and the case snaps on over it. The LED stick shows **out the front**; the XIAO
+rests in a lower skirt, powered by a **USB-C pigtail** off the charger; a separate screw-on
+cover closes the skirt.
+
+- **Print these:** [`box-v2/case.stl`](hardware/status-light/box-v2/case.stl) +
+  [`box-v2/cover.stl`](hardware/status-light/box-v2/cover.stl) — protrudes ~29 mm from the wall.
+- Full parts list (incl. the charger + pigtail), build steps, and design notes:
+  [`hardware/status-light/box-v2/README.md`](hardware/status-light/box-v2/README.md).
+
+Every dimension and how to regenerate the STLs lives in each version's folder; the v1 bill of
+dimensions is in [`hardware/MEASUREMENTS.md`](hardware/MEASUREMENTS.md) and the board/spec
+provenance in [`hardware/status-light/board_spec.md`](hardware/status-light/board_spec.md).
 
 ## Wiring
 

@@ -15,6 +15,19 @@ Same toolchain as `../box` (trimesh CSG, mm, every number provenance-commented i
 `case_params.py`, clearances **ASSERTED** in `build_case.check_clearances()` so an illegal
 edit fails loudly instead of writing a broken STL).
 
+## Parts (bill of materials)
+| # | part | notes |
+|---|---|---|
+| 1 | **USB-C wall charger — Nekmit Ultra-Thin flat, 43.18 × 50.80 × 20.32 mm** | the mechanical + power anchor the case slips over; powers the XIAO over USB-C |
+| 2 | **Case** — `case.stl` (FDM, front-face-down) | main body; press-fits over the charger |
+| 3 | **Cover** — `cover.stl` (FDM, flat) | screw-on skirt back |
+| 1 | Seeed **XIAO ESP32-S3** | rests flat on the skirt floor |
+| 1 | **8-px WS2812 stick** (v1 board, 51.5 × 10 mm) | vertical, behind the front window |
+| 1 | **USB-A → USB-C low-profile pigtail** | charger's bottom port → XIAO USB-C (skirt loop) |
+| 2 | **M3 × 5** self-tapping screws | hold the LED stick (hidden, from the open back) |
+| 2 | **M3 × 8** self-tapping screws | hold the cover into its side-wall bosses |
+| 1 | diffuser film / thin acrylic strip | over the window (outer rebate) |
+
 ## Frame
 `+X` width (horizontal on the wall) · `+Y` up (vertical) · `+Z` out (wall → room).
 Origin: X centred on the charger; `y=0` at the charger's bottom face; `z=0` at the open back rim.

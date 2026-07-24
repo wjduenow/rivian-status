@@ -8,9 +8,9 @@ toolchain lives in the `img23d` conda env (`conda run -n img23d python build_all
 
 **→ [MEASUREMENTS.md](MEASUREMENTS.md) — every dimension the enclosure is built from, in one table.**
 
-| unit | board | parts |
-|------|-------|-------|
-| **[status-light/](status-light/)** | Seeed XIAO ESP32-S3 + generic 8-bit WS2812 stick | **[box/](status-light/box/)** — top-bar desk enclosure (shell + lid) |
+| unit | board | enclosures |
+|------|-------|-----------|
+| **[status-light/](status-light/)** | Seeed XIAO ESP32-S3 + generic 8-bit WS2812 stick | **[box/](status-light/box/)** — v1 top-bar desk enclosure (shell + lid) · **[box-v2/](status-light/box-v2/)** — v2 slip case over a flat wall charger (case + cover) |
 
 ## Conventions
 - Board outlines/holes come from **verified vendor CAD** (Seeed's STEP); connector

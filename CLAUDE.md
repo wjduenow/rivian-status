@@ -31,6 +31,29 @@ harnesses (they hard-code creds in `secrets.h` and print to serial). New product
 - **LEDs (Phase 6):** 8-pixel WS2812/NeoPixel stick. DIN←`D10`/GPIO9 (~330 Ω), 5V←`5V` pin (USB
   VBUS), GND←GND. Single-supply, safe behind a firmware brightness cap. Pixel map in plan §7.
 
+## Enclosures (`hardware/`) — 3D-printed, **two versions**
+Parametric Python CSG (**trimesh + manifold3d**, NOT OpenSCAD) in the **`img23d` conda env**.
+Each version folder holds `case_params.py` (single source of truth, provenance-commented) →
+`build_*.py` (each `assert`s its own clearances, so an illegal edit fails loudly instead of
+writing a broken STL) → `.stl`, plus a `render_preview.py`.
+```bash
+cd hardware/status-light/<box|box-v2> && conda run -n img23d python build_all.py
+```
+| folder | what | printed parts |
+|---|---|---|
+| `hardware/status-light/box/` | **v1** top-bar desk box; LEDs face **up** through a lid window | `shell.stl` + `lid.stl` |
+| `hardware/status-light/box-v2/` | **v2** slip case that press-fits over a **Nekmit flat wall charger**; LEDs face **out** the front | `case.stl` + `cover.stl` |
+
+- **v2 is the newer work — read [`box-v2/NOTES.md`](hardware/status-light/box-v2/NOTES.md) first.**
+  It carries the design reasoning a session would otherwise re-derive: why it protrudes ~29 mm
+  (charger + screw-head relief gap + stick), why hidden-M3 stick screws force that depth, the
+  XIAO-rests-on-the-skirt-floor + separate screw-on skirt cover (so the body prints open-backed,
+  no supports), the skirt height being floored by the USB-A pigtail (~15 mm) not the XIAO, and
+  the print orientation (front-face-down).
+- v1 dimension table: `box/MEASUREMENTS.md`. Shared XIAO mechanical spec (both versions):
+  `status-light/board_spec.md`. Vendor CAD: `status-light/ref/`.
+- **Keep `hardware/` commits separate from firmware** — this is user-owned mechanical work.
+
 ## Modules (`src/`)
 - `rivian_api.{h,cpp}` — **the ONLY file that knows Rivian's URLs/headers/GraphQL** (plan §8).
   Read-only telemetry; persists `u-sess`+`dc-cid` to NVS; reuses the session on boot (no OTP).

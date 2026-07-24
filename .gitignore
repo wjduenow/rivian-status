@@ -2,6 +2,9 @@
 .pio/
 .vscode/
 
+# Claude Code scratch worktrees (`git worktree add .claude/worktrees/<name>`)
+.claude/worktrees/
+
 # Secrets — WiFi + Rivian credentials live here, never committed (plan §1).
 include/secrets.h
 

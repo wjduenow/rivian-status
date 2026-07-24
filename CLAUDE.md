@@ -5,6 +5,7 @@ unofficial cloud GraphQL API and shows charge/plug/range/link-health on LEDs. Al
 login incl. MFA, WiFi, threshold) happens in a browser — no screen.
 
 **Full design + rationale: `plans/01-rivian-status-plan.md` (the source of truth — read it).**
+**CI builds / OTA roadmap: `plans/02-remote-builds-ota.md`.**
 **API research: `research/` (deep-research report + reverse-engineered protocol dig).**
 
 ## Status (2026-07-22)
@@ -24,6 +25,26 @@ and capturing the last few `chargerState` enum values (unplugged/complete/fault)
 **The shipped appliance = the `phase3` env.** `phase1`/`phase2` are serial-only diagnostic
 harnesses (they hard-code creds in `secrets.h` and print to serial). New product features go in the
 `phase3` path + the shared modules.
+
+## Remote builds (CI) — `plans/02-remote-builds-ota.md`
+Ported from `sonos-nest` (whose `plans/06-scalable-ota.md` is the fuller rationale — read it before
+extending this). **Phase 1 only: binaries come from GitHub Actions instead of a laptop. Nothing
+device-side pulls anything yet.**
+- `.github/workflows/firmware.yml` — `v*` tag → Release with `firmware-status.bin` +
+  `manifest.json`; `workflow_dispatch` → artifacts only (test CI off a branch). Builds **only
+  `phase3`**. Pins the platform via `env.PLATFORM` (`espressif32@7.0.1`) — **keep it in sync with
+  the locally-installed platform**, since `platformio.ini` leaves `platform` unpinned on purpose.
+- `tools/git_version.py` — `[env] extra_scripts` pre-script; injects
+  `FW_VERSION = git describe --tags --always --dirty`, shown in the status-page footer. A clean CI
+  tag build is the only thing that reports a bare `v0.1.0`; laptop builds carry `-dirty`/`-N-g…`.
+- `tools/build_manifest.py` — sha256s the bins into `{version, units:{status:{url,sha256,size}}}`.
+- **CI builds with NO `include/secrets.h`** — that's what keeps the SoftAP portal alive and bakes no
+  creds into a public binary. **Never add one to CI**, and don't let a `phase3`-reachable code path
+  reference `RIVIAN_EMAIL`/`WIFI_SSID`/`SEED_USESS` unguarded (that's why `main.cpp`'s
+  `authenticate()`/`readSerialLine()`/`printRaw()` are `#if defined(PHASE1…||PHASE2…)`).
+  Consequence: a Release binary has **no `OTA_PASSWORD`** → its espota listener is unauthenticated.
+  Trusted LAN only, or flash a locally-built binary.
+- Flash a Release build the normal way: download the asset, then espota it (`/ota` skill).
 
 ## Hardware
 - **Board:** Seeed Studio XIAO ESP32-S3 (native USB-C). **The external U.FL antenna MUST be

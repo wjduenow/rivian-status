@@ -193,6 +193,13 @@ static void applyNow(const String& url) {
   });
   httpUpdate.rebootOnUpdate(true);
 
+  // MUST follow redirects, and this is a SEPARATE setting from the manifest fetch above:
+  // HTTPUpdate builds its own internal HTTPClient, so setFollowRedirects() on ours doesn't carry
+  // over. GitHub 302s a release asset to a signed CDN host, so without this the download dies
+  // instantly with HTTP_UE_SERVER_WRONG_HTTP_CODE (-104, "Wrong HTTP Code") on the 302 itself —
+  // which is exactly how the first live pull failed.
+  httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+
   t_httpUpdate_return r;
   if (url.startsWith("https:")) {
     WiFiClientSecure sec;

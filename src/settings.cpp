@@ -12,6 +12,7 @@ static const char* NS = "cfg";
 
 static int    s_thresholdMiles = 50;
 static int    s_ledBrightness  = LED_BRIGHTNESS;
+static int    s_ledRotation    = 0;
 static String s_deviceName     = DEVICE_HOSTNAME;
 
 void Settings::begin() {
@@ -20,6 +21,8 @@ void Settings::begin() {
                                            // (a read-only open would log nvs_open NOT_FOUND)
   s_thresholdMiles = p.getInt("thresh_mi", 50);
   s_ledBrightness  = p.getInt("led_bri", LED_BRIGHTNESS);
+  // Default carries over the older boolean flip, so a unit already set to "flipped" lands on 180°.
+  s_ledRotation    = p.getInt("led_rot", p.getBool("led_flip", false) ? 180 : 0);
   s_deviceName     = p.getString("dev_name", DEVICE_HOSTNAME);
   p.end();
 }
@@ -47,6 +50,23 @@ void Settings::setLedBrightness(int b) {
   p.putInt("led_bri", b);
   p.end();
 }
+
+int Settings::ledRotation() { return s_ledRotation; }
+
+void Settings::setLedRotation(int deg) {
+  deg = ((deg % 360) + 360) % 360;          // accept negatives / over-turns
+  deg = ((deg + 45) / 90 * 90) % 360;       // snap to the nearest quarter turn
+  s_ledRotation = deg;
+  Preferences p;
+  p.begin(NS, false);
+  p.putInt("led_rot", deg);
+  p.end();
+}
+
+// Rotations 0/90 leave pixel 0 at the "fill from" end; 180/270 put it at the far end, so the
+// buffer has to be reversed to keep the meter filling up/right. See leds.cpp applyOrientation().
+bool Settings::ledFlipped()  { return s_ledRotation >= 180; }
+bool Settings::ledVertical() { return s_ledRotation == 0 || s_ledRotation == 180; }
 
 String Settings::deviceName() { return s_deviceName; }
 

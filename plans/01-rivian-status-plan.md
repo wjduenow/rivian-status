@@ -240,6 +240,32 @@ your set charge limit, not 100 %.
 Brightness-capped (`-DLED_BRIGHTNESS`, single-supply off USB VBUS). "Charging" is `charging_active`
 only; `charging_ready` (plugged-idle) reads as not-charging.
 
+**Mounting orientation.** The device is a meter and the outlet decides how it hangs, so which
+physical end reads as "the top" isn't fixed — an outlet can put it at **0/90/180/270°**.
+
+*The invariant:* the meter always fills toward **screen-up** when the stick lands vertical and
+toward **screen-right** when it lands horizontal. The firmware compensates; the reading never
+changes. That's what makes this one setting instead of a per-pattern concern.
+
+*Asked as "where's the plug?"* — `/config` shows four SVG cards (Bottom / Left / Top / Right),
+each drawing the case outline with the lead on that edge plus the cells shaded the way they'll
+fill. That's a thing you can see without reasoning about LED wiring. Stored as
+`Settings::ledRotation()` (NVS `led_rot`, 0/90/180/270, snapped to the nearest quarter turn; it
+defaults off the older `led_flip` bool so an already-flipped unit lands on 180°).
+
+*Implementation:* `render()` always draws in **logical** order (index 0 = the "fill from" end) and
+`applyOrientation()` reverses the buffer afterwards when `Settings::ledFlipped()` — derived as
+`rot >= 180`, since 0/90 leave pixel 0 at the fill-from end and 180/270 don't. One remap covers
+every pattern in the table above, including the OTA bar. Applies on the next frame, no reboot.
+
+> **⚠️VERIFY (assumption):** the derived flip assumes that at 0° (plug at the bottom, v2's natural
+> mounting) **pixel 0 is the bottom-most LED**. If a built unit's stick is wired the other way the
+> whole mapping is inverted — it's a one-line fix in `Settings::ledFlipped()`. Confirm by eye on
+> the real device before treating this as settled.
+
+The status page's 8-segment preview switches **axis** to match (`.meter.col`, a `column-reverse`
+so logical 0 sits at the bottom) — it never reverses, because the physical meter doesn't either.
+
 **Observed `chargerState` values (growing):** `"charging_active"` (pushing power),
 `"charging_ready"` (plugged, idle), `"charging_complete"` (finished / at target — reads as
 not-charging, so at/above target it shows the full green meter). Still needed: the unplugged /

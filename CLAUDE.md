@@ -78,14 +78,19 @@ cd hardware/status-light/<box|box-v2> && conda run -n img23d python build_all.py
 ## Modules (`src/`)
 - `rivian_api.{h,cpp}` — **the ONLY file that knows Rivian's URLs/headers/GraphQL** (plan §8).
   Read-only telemetry; persists `u-sess`+`dc-cid` to NVS; reuses the session on boot (no OTP).
-- `settings.{h,cpp}` — NVS `cfg`: range threshold (miles), device name (= hostname), WiFi creds.
+- `settings.{h,cpp}` — NVS `cfg`: range threshold (miles), LED brightness, mounting rotation
+  (`led_rot` 0/90/180/270 = where the plug exits; `ledFlipped()`/`ledVertical()` derive from it),
+  device name (= hostname), WiFi creds.
 - `net_wifi.{h,cpp}` — connect (hostname before STA transition!), runtime creds, SoftAP portal.
 - `net_ota.{h,cpp}` — ArduinoOTA as `<device name>.local`.
 - `webserver.{h,cpp}` — WebServer:80 + the **FreeRTOS poll task** + shared snapshot (mutex-guarded);
   exposes `ledState()` for the LED map.
 - `leds.{h,cpp}` — **Phase 6** 8-pixel WS2812 status map (§7) via FastLED on D10/GPIO9; reads
   `ledState()` + `otaActive()`; brightness-capped. Built into `phase3` only (stubs elsewhere). All
-  Rivian enum reads (`sCharging`/`sPlugged`/`sFault`) are centralized here.
+  Rivian enum reads (`sCharging`/`sPlugged`/`sFault`) are centralized here. `render()` always draws
+  in **logical** order; `applyOrientation()` reverses the buffer afterwards per the `/config`
+  mounting rotation, so every pattern (incl. the OTA bar) follows the mounting without knowing
+  about it. **Invariant: the meter always fills up (vertical) / right (horizontal)** — plan §7.
 - `main.cpp` — orchestration, split by `#ifdef PHASE1_SMOKE_TEST / PHASE2_POLL_LOOP / PHASE3_WEBAPP`.
   `ledtest.cpp` is a standalone WS2812 wiring smoke-test (`-DPHASE6_LEDTEST`, its own env).
 

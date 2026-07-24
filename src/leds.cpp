@@ -6,6 +6,11 @@
 //   link UP + not charging + range below threshold      -> all pixels flash red together (low-range alert)
 //   link UP + not charging + range OK                   -> meter: green filled + white empty (fill = SoC/target)
 //   OTA push in progress                                -> whole strip is a blue progress bar
+//
+// render() always draws in *logical* order (index 0 = the "fill from" end of the meter). The
+// physical mounting is applied afterwards as a one-shot reverse, so every pattern above follows
+// the mounting and no effect has to know how the device hangs. The user picks the mounting on
+// /config as **where the USB-C plug is** (0/90/180/270); Settings derives the reverse from it.
 #ifdef PHASE3_WEBAPP
 
 #include "leds.h"
@@ -94,6 +99,16 @@ static void render() {
     leds[i] = (i < n) ? CRGB(0, 160, 0) : CRGB(120, 120, 120);
 }
 
+// Map the logical buffer onto the physical stick. Mounted a half-turn round (plug at the top or
+// the right), pixel 0 lands at the far end — so reverse in place to keep the meter filling toward
+// the top / the right. Cheap enough (8 pixels) to just do it every frame.
+static void applyOrientation() {
+  if (!Settings::ledFlipped()) return;
+  for (int i = 0, j = LED_COUNT - 1; i < j; i++, j--) {
+    CRGB t = leds[i]; leds[i] = leds[j]; leds[j] = t;
+  }
+}
+
 void ledsBegin() {
   FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(leds, LED_COUNT);
   FastLED.setBrightness(Settings::ledBrightness());   // runtime cap from NVS (/config)
@@ -108,6 +123,7 @@ void ledsLoop() {
   last = now;
   FastLED.setBrightness(Settings::ledBrightness());   // pick up /config changes without a reboot
   render();
+  applyOrientation();                                 // ditto for the mounting orientation
   FastLED.show();
 }
 

@@ -103,11 +103,18 @@ static const char* CSS =
   "background:#111;color:#eee}a{color:#6cf}h1{font-size:1.2rem}.card{background:#1c1c1c;"
   "border-radius:10px;padding:1rem;margin:.8rem 0}.row{display:flex;justify-content:space-between;"
   "padding:.25rem 0;border-bottom:1px solid #2a2a2a}.row:last-child{border:0}.k{color:#9a9a9a}"
-  "input{padding:.5rem;border-radius:6px;border:1px solid #444;background:#222;color:#eee;width:100%}"
+  "input,select{padding:.5rem;border-radius:6px;border:1px solid #444;background:#222;color:#eee;"
+  "width:100%}"
   "button{padding:.6rem 1rem;border:0;border-radius:6px;background:#3a7;color:#022;font-weight:600;"
   "cursor:pointer;margin-top:.6rem}.pill{padding:.15rem .5rem;border-radius:999px;font-size:.85rem}"
   ".ok{background:#153}.warn{background:#530}.err{background:#500}nav a{margin-right:1rem}"
-  ".meter{display:flex;gap:4px;margin:.3rem 0}.seg{flex:1;height:20px;border-radius:4px}"
+  ".meter{display:flex;gap:4px;margin:.3rem 0;height:20px}"
+  ".meter.col{flex-direction:column-reverse;height:168px;width:26px}"
+  ".seg{flex:1;border-radius:4px}"
+  ".orient{display:flex;gap:.4rem;margin:.3rem 0}.orient label{flex:1;text-align:center;"
+  "border:1px solid #444;border-radius:8px;padding:.4rem .2rem;cursor:pointer;font-size:.78rem;"
+  "color:#9a9a9a}.orient label:has(input:checked){border-color:#3a7;background:#152e22;color:#eee}"
+  ".orient input{width:auto;margin:.2rem 0 0;accent-color:#3a7}"
   ".seg.o{background:#2a2a2a}.seg.g{background:#2ecc40}.seg.r{background:#ff4136}.seg.w{background:#e8e8e8}"
   ".pulse{animation:pl 1s ease-in-out infinite}.flash{animation:fl .6s steps(1,end) infinite}"
   "@keyframes pl{0%,100%{opacity:.3}50%{opacity:1}}@keyframes fl{0%,50%{opacity:1}50.01%,100%{opacity:.15}}"
@@ -164,7 +171,10 @@ static String meterHtml(const Snap& s, int threshMiles) {
     }
   }
 
-  String h = "<div class=meter>";
+  // The firmware compensates for the mounting, so the meter always *reads* the same way — fills
+  // up when the stick lands vertical, right when it lands horizontal. The preview therefore only
+  // switches axis; it never reverses. (column-reverse puts logical pixel 0 at the bottom.)
+  String h = String("<div class='meter") + (Settings::ledVertical() ? " col" : "") + "'>";
   for (int i = 0; i < N; i++) h += "<div class='seg " + seg[i] + "'></div>";
   return h + "</div>";
 }
@@ -273,6 +283,52 @@ static void handleOtpPost() {
   else    { s_server.send(200, "text/html", otpForm(email, "Code rejected: " + RivianApi::lastError())); }
 }
 
+// One little diagram per mounting: the case outline with the USB-C / power lead on the edge you
+// can see it on, and the 8 meter cells shaded the way they'll fill once the firmware compensates.
+// Note the shading is always "full toward the top / the right" — that invariant IS the feature.
+static String orientSvg(int rot) {
+  const bool vert = (rot == 0 || rot == 180);        // plug bottom/top -> the stick lands vertical
+  const int  W = vert ? 26 : 54, H = vert ? 54 : 26;
+  const int  x0 = (64 - W) / 2, y0 = (64 - H) / 2;
+  const int  FILLED = 5;                             // representative 5-of-8 fill, just for shape
+
+  String s = "<svg viewBox='0 0 64 64' width=52 height=52>";
+  // Power lead, straddling whichever edge it exits.
+  int px = 32 - 5, py = 32 - 5, pw = 10, ph = 5;
+  if      (rot == 0)   { py = y0 + H - 1; }
+  else if (rot == 180) { py = y0 - 4;     }
+  else if (rot == 90)  { px = x0 - 4;      pw = 5; ph = 10; }
+  else                 { px = x0 + W - 1;  pw = 5; ph = 10; }
+  s += "<rect x=" + String(px) + " y=" + String(py) + " width=" + String(pw) + " height=" + String(ph) +
+       " rx=1.5 fill='#8a8a8a'/>";
+  // Case body.
+  s += "<rect x=" + String(x0) + " y=" + String(y0) + " width=" + String(W) + " height=" + String(H) +
+       " rx=4 fill='#222' stroke='#555'/>";
+  // The 8 cells, laid out along the long axis. Logical index 0 is the "fill from" end: the
+  // bottom when vertical, the left when horizontal.
+  for (int i = 0; i < 8; i++) {
+    const char* c = (i < FILLED) ? "#2ecc40" : "#3f3f3f";
+    if (vert) {
+      int ch = (H - 10) / 8, cx = x0 + 5, cw = W - 10;
+      int cy = y0 + H - 5 - (i + 1) * ch;            // index 0 at the bottom -> fills upward
+      s += "<rect x=" + String(cx) + " y=" + String(cy + 1) + " width=" + String(cw) +
+           " height=" + String(ch - 2) + " rx=1 fill='" + c + "'/>";
+    } else {
+      int cw = (W - 10) / 8, cy = y0 + 5, ch = H - 10;
+      int cx = x0 + 5 + i * cw;                      // index 0 at the left -> fills rightward
+      s += "<rect x=" + String(cx + 1) + " y=" + String(cy) + " width=" + String(cw - 2) +
+           " height=" + String(ch) + " rx=1 fill='" + c + "'/>";
+    }
+  }
+  return s + "</svg>";
+}
+
+static String orientCard(int rot, const char* caption, int current) {
+  return "<label>" + orientSvg(rot) + "<br>" + caption +
+         "<br><input type=radio name=orientation value=" + String(rot) +
+         (rot == current ? " checked" : "") + "></label>";
+}
+
 static void handleConfigGet(const String& msg = "") {
   String b = pageHead("Config", false);
   b += "<div class=card><h1>Config</h1>";
@@ -282,8 +338,19 @@ static void handleConfigGet(const String& msg = "") {
        "<input name=threshold type=number min=1 max=500 value='" + String(Settings::rangeThresholdMiles()) + "'>"
        "<p class=k>LED brightness</p>"
        "<input name=brightness type=range min=1 max=255 value='" + String(Settings::ledBrightness()) + "'"
-       " oninput='bo.value=this.value'><output id=bo>" + String(Settings::ledBrightness()) + "</output>"
-       "<p class=k>Device name</p>"
+       " oninput='bo.value=this.value'><output id=bo>" + String(Settings::ledBrightness()) + "</output>";
+  // Mounting orientation. Asked as "where's the plug?" because that's the thing you can see
+  // without thinking about LED wiring — the outlet decides how the device ends up hanging.
+  const int rot = Settings::ledRotation();
+  b += "<p class=k>Mounting — where does the plug come out?</p><div class=orient>";
+  b += orientCard(0,   "Bottom", rot);
+  b += orientCard(90,  "Left",   rot);
+  b += orientCard(180, "Top",    rot);
+  b += orientCard(270, "Right",  rot);
+  b += "</div><p class=k style='font-size:.8rem'>The meter always fills toward the top (mounted "
+       "upright) or toward the right (mounted sideways) — pick the picture that matches your "
+       "device and the firmware handles the rest.</p>";
+  b += "<p class=k>Device name</p>"
        "<input name=name maxlength=32 value='" + Settings::deviceName() + "'>"
        "<button type=submit>Save</button></form>";
   b += "</div>" + pageFoot();
@@ -292,6 +359,8 @@ static void handleConfigGet(const String& msg = "") {
 static void handleConfigPost() {
   if (s_server.hasArg("threshold")) Settings::setRangeThresholdMiles(s_server.arg("threshold").toInt());
   if (s_server.hasArg("brightness")) Settings::setLedBrightness(s_server.arg("brightness").toInt());
+  // Takes effect on the next LED frame (~20 ms) — no reboot, same as brightness.
+  if (s_server.hasArg("orientation")) Settings::setLedRotation(s_server.arg("orientation").toInt());
 
   // A device-name change means a new DHCP hostname + mDNS + AP name. Those only re-register on a
   // fresh STA association, so — like sonos-nest — save and reboot so all three come up together.

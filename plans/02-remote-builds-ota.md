@@ -104,6 +104,32 @@ Unit ids are parsed from filenames, so adding an env to the CI matrix adds a man
 change to the script. `sha256`/`size` are advisory — they let a Phase 2 firmware add image
 verification without a schema change.
 
+### `firmware-status-full.bin` — the cold-flash image
+
+The app binary above lands at `0x10000` and is all OTA needs, but it's useless on a **factory-fresh
+board**, which has no bootloader — so a first flash otherwise means building from source. CI now
+also publishes a **merged full-flash image**: `esptool merge_bin` (pinned to the toolchain's 4.11.0
+— `merge_bin`'s CLI changed in 5.x) stitching the four images a blank board needs into one
+flashable at `0x0`:
+
+| offset | image | source |
+|---|---|---|
+| `0x0` | bootloader | `.pio/build/phase3/bootloader.bin` |
+| `0x8000` | partition table | `.pio/build/phase3/partitions.bin` |
+| `0xe000` | otadata (boot_app0) | framework `tools/partitions/boot_app0.bin` |
+| `0x10000` | app | `.pio/build/phase3/firmware.bin` |
+
+Flash args (`dio` / `80m` / `8MB`) and offsets mirror exactly what `pio run -t upload` issues for
+this board — captured from the real esptool invocation, not assumed. Output is ~1.1 MB (sized to
+the app's end, not padded to 8 MB), and each region was verified byte-for-byte against the
+individual images with `0xFF` fill in the gaps, so a cold flash of it produces a byte-identical
+layout to a normal PlatformIO first-flash.
+
+**It must never enter the OTA path.** `HTTPUpdate` writes one app slot, so a device that pulled the
+full image would flash the bootloader/partition-table bytes into `app0` and brick. `build_manifest.py`
+therefore skips `*-full.bin`, and the manifest lists only `firmware-status.bin`. Users flash the
+full image once over USB (esptool at `0x0`, or a WebSerial flasher) and OTA takes over.
+
 ### The secrets.h decision (important, and it required a code change)
 
 **CI builds with no `include/secrets.h` at all.** Not a copy of `secrets.h.example` — copying it

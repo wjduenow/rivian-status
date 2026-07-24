@@ -33,6 +33,13 @@ def main() -> int:
 
     units = {}
     for bin_path in sorted(bins_dir.glob("firmware-*.bin")):
+        # Skip the merged full-flash image (firmware-<unit>-full.bin). It is a Release asset for a
+        # cold USB flash of a blank board, NOT an OTA target: it starts at 0x0 with the bootloader
+        # and partition table, so a device that fed it to HTTPUpdate (which writes a single app
+        # slot) would flash garbage. The manifest must only ever list the app image the pull-OTA
+        # path can safely apply. See .github/workflows/firmware.yml and plans/02.
+        if bin_path.name.endswith("-full.bin"):
+            continue
         unit = bin_path.stem[len("firmware-"):]  # firmware-status.bin -> "status"
         data = bin_path.read_bytes()
         units[unit] = {

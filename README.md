@@ -36,9 +36,37 @@ and a USB-C supply. Full list with links in [Parts](#parts).
 **2. Print the case** and wire the stick to the board — [enclosure](#the-enclosure-case) and
 [wiring](#wiring). You can do this after step 3 if you'd rather see it running on the bench first.
 
-**3. Flash it the first time, over USB.** A new board needs a full flash — bootloader, partition
-table and app — so this first one is done from source with PlatformIO. Wireless updates take over
-afterwards.
+**3. Flash it the first time, over USB.** Plug the board into a computer — it shows up as a USB
+serial port (`303A:1001`). Pick **one** of these; after this first flash everything is wireless.
+
+Wireless (OTA) can't do the first flash: a factory-fresh board has no bootloader, and OTA replaces
+only the app. So the first flash must write the whole layout over USB — which is exactly what the
+merged image below is.
+
+<details open>
+<summary><b>Option A — flash the prebuilt image (no toolchain)</b></summary>
+
+Download **`firmware-status-full.bin`** from the
+[latest release](https://github.com/wjduenow/rivian-status/releases/latest) — a single
+full-flash image (bootloader + partition table + app) built and published by CI.
+
+- **In a browser (easiest):** open the [ESP web flasher](https://espressif.github.io/esptool-js/),
+  Connect, set the offset to **`0x0`**, choose the file, and Program. Works in Chrome/Edge over
+  WebSerial — no install.
+- **From a terminal:**
+  ```bash
+  pip install esptool
+  esptool.py --chip esp32s3 write_flash 0x0 firmware-status-full.bin
+  ```
+
+The build published this way carries no baked-in secrets, so it comes up in first-boot setup mode
+(next step) — and its wireless-flash listener has no password, so keep it on a network you trust.
+</details>
+
+<details>
+<summary><b>Option B — build from source</b></summary>
+
+Gives you a build you can set an OTA password on, and is the path for development.
 
 ```bash
 pip install platformio                                    # if you don't have it
@@ -46,18 +74,10 @@ git clone https://github.com/wjduenow/rivian-status && cd rivian-status
 pio run -e phase3 -t upload --upload-port /dev/ttyACM0    # or COMx / /dev/cu.usbmodem*
 ```
 
-The board appears as a USB serial port when you plug it in (`303A:1001`). PlatformIO usually
-finds it on its own, so you can drop `--upload-port` and let it autodetect.
-
-You do **not** need to create `include/secrets.h` — it's optional, and leaving it out is the
-supported path. Everything (WiFi, Rivian login) is configured in the browser below.
-
-> **Why not just download the release binary?** The `firmware-status.bin` on the
-> [Releases page](https://github.com/wjduenow/rivian-status/releases) is the *application image
-> only*. A factory-fresh board also needs a bootloader at `0x0` and a partition table at `0x8000`,
-> which that asset doesn't contain — so it's the right file for *updating* a device that already
-> runs this firmware, not for the first flash. Build from source once and you never need a cable
-> again.
+PlatformIO usually finds the port on its own, so you can drop `--upload-port`. You do **not** need
+to create `include/secrets.h` — omitting it is the supported path, and it's how the release image
+above is built. See [Building & flashing](#building--flashing-developer-reference) for details.
+</details>
 
 **4. Join it to your WiFi.** On first boot it has no credentials, so it raises its own hotspot:
 
@@ -268,9 +288,19 @@ OTA_PASSWORD=<pw> pio run -e phase3-ota -t upload --upload-port <device-ip>
 ```
 
 A full USB flash writes four images; PlatformIO handles the offsets for you
-(`0x0` bootloader, `0x8000` partition table, `0xe000` boot_app0, `0x10000` app). Only the last of
-those is what a Release publishes and what OTA replaces — which is why the first flash is the one
-that must come from a build.
+(`0x0` bootloader, `0x8000` partition table, `0xe000` boot_app0, `0x10000` app). OTA replaces only
+the last of these.
+
+Each Release publishes two assets, both built by CI (`.github/workflows/firmware.yml`):
+
+| asset | what it is | flash how |
+|---|---|---|
+| `firmware-status.bin` | the app image (`0x10000`) alone | OTA / `pio run -e phase3-ota`; also what the device pulls for auto-update |
+| `firmware-status-full.bin` | all four images merged into one, flashable at `0x0` | a first flash of a blank board over USB (see [Build one from scratch](#build-one-from-scratch)) |
+
+The merged image is only for a cold USB flash — never feed it to OTA, which writes a single app
+slot and would flash the bootloader header into it. `manifest.json` deliberately lists only the app
+image for exactly that reason.
 
 `include/secrets.h` is **optional** and gitignored (template: `include/secrets.h.example`). `phase3` builds
 fine without it — that's how release binaries are built, and it's what keeps the setup portal and

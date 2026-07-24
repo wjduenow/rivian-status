@@ -69,7 +69,9 @@ jobs:
           key: pio-${{ runner.os }}-${{ env.PLATFORM }}-${{ hashFiles('platformio.ini', '.github/workflows/firmware.yml') }}
           restore-keys: pio-${{ runner.os }}-${{ env.PLATFORM }}-
 
-      - run: pip install platformio
+      # esptool pinned to the 4.x that the toolchain builds with — `merge_bin` (see the merge step
+      # below) changed its CLI in 5.x, so the upper bound is load-bearing, not cosmetic.
+      - run: pip install platformio "esptool==4.11.0"
 
       # Pin the platform so the unpinned `platform = espressif32` resolves to it (see header note).
       - name: Pin espressif32 platform
@@ -90,13 +92,34 @@ jobs:
       - name: Build ${{ matrix.env }}
         run: pio run -e ${{ matrix.env }}
 
-      - name: Stage binary
+      - name: Stage app binary
         run: cp ".pio/build/${{ matrix.env }}/firmware.bin" "firmware-${{ matrix.unit }}.bin"
+
+      # Merge the four images a blank board needs (bootloader @0x0, partition table @0x8000,
+      # boot_app0/otadata @0xe000, app @0x10000) into one image flashable at 0x0. The app binary
+      # above is only the app slot — useless on a factory-fresh board, which has no bootloader — so
+      # without this a first flash requires building from source. The offsets and the flash args
+      # (dio / 80m / 8MB) mirror exactly what `pio run -t upload` issues for this board; verified by
+      # comparing the merged regions byte-for-byte against the individual images. The output is
+      # sized to the app's end (~1.1 MB), NOT padded to 8 MB.
+      - name: Merge full-flash image
+        run: |
+          BOOT_APP0="$(find "$HOME/.platformio/packages" -path '*/tools/partitions/boot_app0.bin' | head -1)"
+          test -n "$BOOT_APP0" || { echo "boot_app0.bin not found"; exit 1; }
+          python -m esptool --chip esp32s3 merge_bin \
+            -o "firmware-${{ matrix.unit }}-full.bin" \
+            --flash_mode dio --flash_freq 80m --flash_size 8MB \
+            0x0     ".pio/build/${{ matrix.env }}/bootloader.bin" \
+            0x8000  ".pio/build/${{ matrix.env }}/partitions.bin" \
+            0xe000  "$BOOT_APP0" \
+            0x10000 ".pio/build/${{ matrix.env }}/firmware.bin"
 
       - uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.unit }}
-          path: firmware-${{ matrix.unit }}.bin
+          path: |
+            firmware-${{ matrix.unit }}.bin
+            firmware-${{ matrix.unit }}-full.bin
           if-no-files-found: error
 
   release:

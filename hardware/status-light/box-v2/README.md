@@ -15,13 +15,13 @@ Same toolchain as `../box` (trimesh CSG, mm, every number provenance-commented i
 `case_params.py`, clearances **ASSERTED** in `build_case.check_clearances()` so an illegal
 edit fails loudly instead of writing a broken STL).
 
-**Design decisions + rationale** (why it's ~29 mm deep, why hidden M3 forces that, the skirt /
-cover / lip choices): [`NOTES.md`](NOTES.md). The shared XIAO board spec is `../board_spec.md`.
+**Design decisions + rationale** (why it's ~30 mm deep, why hidden M3 forces that, the skirt /
+cover choices): [`NOTES.md`](NOTES.md). The shared XIAO board spec is `../board_spec.md`.
 
 ## Parts (bill of materials)
 | # | part | notes |
 |---|---|---|
-| 1 | **USB-C wall charger — Nekmit Ultra-Thin flat, 43.18 × 50.80 × 20.32 mm** | the mechanical + power anchor the case slips over; powers the XIAO over USB-C |
+| 1 | **USB-C wall charger — Nekmit Ultra-Thin flat, 45.1 × 51.6 × 20.32 mm** | the mechanical + power anchor the case slips over; powers the XIAO over USB-C |
 | 2 | **Case** — `case.stl` (FDM, front-face-down) | main body; press-fits over the charger |
 | 3 | **Cover** — `cover.stl` (FDM, flat) | screw-on skirt back |
 | 1 | Seeed **XIAO ESP32-S3** | rests flat on the skirt floor |
@@ -40,43 +40,43 @@ Origin: X centred on the charger; `y=0` at the charger's bottom face; `z=0` at t
   It drops into a front **pocket** (domes → `+Z` out the window) and is **screwed** through its
   two Ø3.75 holes to bosses molded off the front wall. The **M3 self-tappers go in from the
   OPEN BACK** — heads hidden from the front, sitting in a relief gap behind the PCB — and their
-  pilots thread up into the **solid 2.2 mm front wall** (not thin necked walls). Recommended
-  screw: **M3×5** (~3.4 mm thread engagement). The window ledge is a second, backup stop.
+  pilots thread up into the **solid 3.2 mm front wall** (not thin necked walls), capped by
+  **1.6 mm** of wall so the pilots stay hidden from the front. Recommended screw: **M3×5**
+  (~3.6 mm thread engagement). The window ledge is a second, backup stop.
 - **XIAO ESP32-S3 rests flat on the skirt floor** (no tray) — gravity + the wires to the stick
   hold it; the USB-A→USB-C pigtail from the charger's bottom port loops down to it. The stick
   pocket, charger cavity and skirt share one open interior, so wiring routes freely between them.
 - **Skirt back = a separate screw-on `cover`.** The main body prints **fully open-backed** (no
-  supports in a blind pocket); the cover drops into a flush rebate and is held by **2 M3×8**
-  self-tappers, countersunk on the wall-facing face, into gusseted side-wall bosses. Its **top
-  edge is captured by two corner tabs** — the cover's top corners step to a half-thickness
-  tongue that tucks under body tabs, so the top can't pull out (tilt the tongue in, then screw
-  the bottom). It closes the XIAO bay and stops the board falling out the back.
+  supports in a blind pocket); the cover is a **plain plate** that drops into a flush rebate and
+  is held by **2 M3×8** self-tappers, countersunk on the wall-facing face, into gusseted
+  side-wall bosses. It closes the XIAO bay and stops the board falling out the back.
 - **Retention:** an inward **snap lip** around the back rim catches behind the charger's rear
   edge (blueprint §3).
 
 ## Key numbers (all in `case_params.py`)
 | | mm | source |
 |---|---|---|
-| Charger (W×H×D) | 43.18 × 50.80 × 20.32 | blueprint |
-| Slip-fit cavity | 43.78 × 51.40 × 20.72 | +0.6/+0.6/+0.4 |
-| **Outer envelope (W×H×D)** | **48.2 × 72.8 × 29.1** | derived |
-| Protrusion from wall | **29.1** | derived |
-| Wall / front | 2.2 / 2.2 | choice |
-| Skirt (interior height) | 17.0 | floored by the USB-A pigtail (~15 mm) |
+| Charger (W×H×D) | 45.1 × 51.6 × 20.32 | W×H calipered 2026-07-24; D blueprint |
+| Slip-fit cavity | 45.70 × 52.20 × 20.72 | +0.6/+0.6/+0.4 |
+| **Outer envelope (W×H×D)** | **50.1 × 97.6 × 30.1** | derived |
+| Protrusion from wall | **30.1** | derived |
+| Wall / front | 2.2 / 3.2 | choice (front thickened to hide the screw-post pilots) |
+| Skirt (interior height) | 41.0 | +24 for the USB cable/plug (17 → 29 → 41) |
 | Window (X×Y) | 5.95 × 50.95 | over the emitter run |
-| Stick screws | 2 × **M3×5** from the back, hidden | Ø5.0 bosses, ~3.4 mm grip |
+| Stick screws | 2 × **M3×5** from the back, hidden | Ø5.0 bosses, ~3.6 mm grip |
 | Head-relief gap / dome recess | 2.6 / 0.6 | behind the PCB / below the window |
-| Skirt-back cover | separate plate, 2 × **M3×8** | flush rebate, gusseted bosses |
+| Skirt-back cover | plain plate, 2 × **M3×8** | flush rebate, gusseted bosses |
 | Snap lip (inward × tall) | 1.2 × 2.0 | blueprint 1.0–1.5 |
 
 ## Deliberate deviations from the blueprint (documented, not accidents)
-1. **Depth grows to ~29.1 mm** (blueprint said ~20.7 + wall). The blueprint assumed the
+1. **Depth grows to ~30.1 mm** (blueprint said ~20.7 + wall). The blueprint assumed the
    charger touches the front wall, but the vertical LED stick sits **in front of** the charger
    (3.0 mm) **and is back-screwed**, needing a **2.6 mm relief gap** behind it for the hidden
-   screw heads. So internal depth = charger + head gap + stick.
-2. **Skirt is 17 mm** (blueprint 15–18). It's floored by the **USB-A pigtail plug's vertical
-   clearance** hanging off the charger's bottom port — *not* the XIAO, which now lies flat on
-   the floor (~5.5 mm tall). Down from the earlier 24 mm.
+   screw heads. So internal depth = charger + head gap + stick, plus a **3.2 mm front wall**
+   (thickened from 2.2 to keep the screw-post pilots hidden).
+2. **Skirt is 41 mm** (blueprint 15–18; grown 17 → 29 → 41 in two +12 bumps). Sized to clear the
+   **USB cable/plug** hanging off the charger's bottom port. The XIAO lies flat on the floor
+   (~5.5 mm tall) and doesn't set the height.
 
 ## Print orientation
 Print **front-face-down** on the bed: the window is a flat bottom layer, the walls rise, and
@@ -86,15 +86,14 @@ cover). The rear snap lip becomes a small inward overhang at the top; a chamfer 
 lines clean it up. The `cover` prints flat, csk-face up.
 
 ## Open items / next iteration
-- **Stick thread engagement is modest (~3.4 mm).** Fine for a ~3 g static part, but if you
+- **Stick thread engagement is modest (~3.6 mm).** Fine for a ~3 g static part, but if you
   want more grip, raise `DOME_RECESS` (lets the boss get taller, at a little more depth) or
   step to a longer screw. Print a boss test coupon — FDM self-tap holes want tuning.
 - **XIAO is unretained sideways** — it just rests on the floor (per your call). Gravity + the
   stick wires + the back cover hold it; add a dab of foam if it rattles in transit.
-- **Cover top edge** is now held by **two corner retaining tabs** (tongue-under-tab) in addition
-  to the 2 side screws + bottom/side rebate. The tabs are short print overhangs (corner tabs,
-  not a full-width lip → no 44 mm bridge); verify they clear on a test print and tune
-  `COVER_LIP_*` if the tongue is tight.
+- **Cover top edge** is now held only by the **2 side screws** + the flush rebate (the
+  tongue-under-tab retention was removed as unhelpful). If the top ever bows outward, add a
+  third screw or a small central boss rather than reintroducing the tabs.
 - **First flash.** No external USB-C port by default — first flash the XIAO out of the case,
   then it's OTA over WiFi. Set `USB_SERVICE_SLOT = True` to cut a cabled-access slot in the
   skirt bottom.

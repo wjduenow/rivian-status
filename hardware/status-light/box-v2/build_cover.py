@@ -14,7 +14,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from trimesh.boolean import difference
 import case_params as P
-from build_case import rrect, prism, cyl_z, box_at
+from build_case import rrect, prism, cyl_z
 
 
 def build_cover():
@@ -25,14 +25,7 @@ def build_cover():
         subs.append(cyl_z(P.COVER_SCREW_CLR / 2, -0.1, P.COVER_T + 0.1, cx, cy))   # clearance hole
         subs.append(cyl_z(P.COVER_CSK_D / 2, -0.1, 1.2, cx, cy))                    # csk on the wall face
 
-    # top-corner tongue: remove the OUTER slice (z 0..COVER_LIP_T) so the top edge tucks UNDER
-    # the body's retaining tabs (which fill that slice).  Extra length in Y lets it slide in.
-    step_y = P.COVER_LIP_Y + P.COVER_LIP_SLIDE
-    for sx in (-1, 1):
-        x_out = sx * (P.COVER_W / 2 + 0.2)
-        x_in = sx * (P.COVER_W / 2 - P.COVER_LIP_REACH - 1.0)
-        subs.append(box_at(abs(x_out - x_in), step_y + 0.2, P.COVER_LIP_T + 0.1,
-                           (x_out + x_in) / 2, P.COVER_TOP_Y - step_y / 2 + 0.1, P.COVER_LIP_T / 2 - 0.05))
+    # (the top-corner retaining tongue was removed with the body tabs -- plain plate now)
     return difference([plate] + subs)
 
 

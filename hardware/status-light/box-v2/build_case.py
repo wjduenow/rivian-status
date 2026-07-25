@@ -96,16 +96,6 @@ def build_case():
         adds.append(cyl_z(P.STRIP_BOSS_OD / 2, P.LED_PCB_TOP_Z, P.D_IN, hx, hy))
         strip_pilots.append(cyl_z(P.SCREW_PILOT / 2, P.LED_PCB_TOP_Z - 0.2, P.PILOT_TOP_Z, hx, hy))
 
-    # -- top retaining lip: two tabs at the top corners of the skirt opening.  Each fills the
-    #    OUTER slice (z 0..COVER_LIP_T) over a top corner, overlapping the cover's half-thickness
-    #    tongue so the cover top can't pull out.  Rooted along the side border wall.
-    for sx in (-1, 1):
-        x_root = sx * (P.REB_X / 2 + 0.6)                       # into the side border wall
-        x_tip = sx * (P.REB_X / 2 - P.COVER_LIP_REACH)          # inward reach
-        subs2_w = abs(x_root - x_tip)
-        adds.append(box_at(subs2_w, P.COVER_LIP_Y, P.COVER_LIP_T,
-                           (x_root + x_tip) / 2, -P.COVER_LIP_Y / 2, P.COVER_LIP_T / 2))
-
     # -- skirt-cover screw bosses: a post gusseted out to each side wall, with a blind pilot
     #    the cover's M3 screws bite into (driven from the back, countersunk flush in the cover)
     for (cx, cy) in P.COVER_SCREW_XY:
@@ -151,8 +141,6 @@ def check_clearances():
         assert cy - P.COVER_BOSS_OD / 2 > P.XIAO_FLOOR_Y + P.PCB_T + P.COMP_Z_ABOVE_PCB, \
             "cover boss fouls the XIAO on the floor"
     assert P.REB_H > 0, "skirt cover rebate has no height"
-    assert 0 < P.COVER_LIP_T < P.COVER_T, "cover lip thicker than the cover"
-    assert P.COVER_LIP_REACH < P.COVER_W / 2, "cover lip reaches past the plate centre"
     # snap lip is sane
     assert P.LIP_IN < P.WALL and P.LIP_H < P.CAV_D, "snap lip out of range"
 

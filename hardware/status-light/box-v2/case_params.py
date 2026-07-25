@@ -4,8 +4,8 @@ a single full-cover shell that press-fits OVER a Nekmit Ultra-Thin flat USB wall
 The charger is the mechanical + electrical anchor: it plugs into the wall socket, its AC
 prongs protrude out the OPEN BACK, and the shell slides on from behind and snaps in place.
 
-    +X  width   (horizontal on the wall)      -- charger 43.18 wide
-    +Y  up      (vertical on the wall)         -- charger 50.8 tall; skirt hangs BELOW it
+    +X  width   (horizontal on the wall)      -- charger 45.1 wide
+    +Y  up      (vertical on the wall)         -- charger 51.6 tall; skirt hangs BELOW it
     +Z  out     (depth, wall -> room)          -- charger 20.32 deep; LED board + window in front
 
 World origin: X centred on the charger; y = 0 at the charger's BOTTOM face (the USB-A ports,
@@ -37,9 +37,9 @@ CAD=Seeed STEP, CHOICE=design value, DERIVED=computed below.
 # ======================================================================================
 #  Nekmit Ultra-Thin Flat Wall Charger  (dual USB-A, 12W/15W)  -- source: BP (blueprint)
 # ======================================================================================
-CHG_W = 43.18    # BP  width  (world X)
-CHG_H = 50.80    # BP  height (world Y)
-CHG_D = 20.32    # BP  depth  (world Z, wall->room)
+CHG_W = 45.1     # MEAS calipered 2026-07-24 (was BP 43.18 -- too small, shell wouldn't slip on)
+CHG_H = 51.6     # MEAS calipered 2026-07-24 (was BP 50.80 -- too small)
+CHG_D = 20.32    # BP  depth  (world Z, wall->room)  -- not re-measured; fit was OK on this axis
 
 # Slip-fit slack so the FDM shell slides over the charger without splitting (BP: +0.6 on the
 # two flat dims, +0.4 on depth -> +0.3/+0.3/+0.2 per side).
@@ -76,7 +76,8 @@ STRIP_SCREW_HEAD_H = 2.2   # M3 head height
 STRIP_HEAD_RELIEF  = 2.6   # air kept behind the stick's PCB for the screw heads (> head H)
 STRIP_BOSS_OD      = 5.0   # boss nub Ø on the front-wall interior over each hole
 DOME_RECESS        = 0.6   # domes sit this far below the window inner face (also a light baffle)
-PILOT_WALL_MIN     = 0.8   # min front-wall left over the blind pilot (don't breach the face)
+PILOT_WALL_MIN     = 1.6   # solid wall left CAPPING the blind pilot -> hides the post from the
+                           # front (was 0.8, thin enough that the pilot showed through)
 
 # ======================================================================================
 #  XIAO ESP32-S3  -- lives in the skirt bay.  numbers from Seeed's STEP (../box, CAD)
@@ -93,7 +94,8 @@ COMP_Z_ABOVE_PCB = 4.21  # CAD  tallest part (USB-C shell) off the PCB back
 #  Shell  -- CHOICE (wall thickness per BP: 2.0-2.4 mm = 5-6 perimeters @ 0.4 nozzle)
 # ======================================================================================
 WALL      = 2.2    # CHOICE  side/top walls (BP 2.0-2.4)
-FRONT_T   = 2.2    # CHOICE  front face (holds the window)
+FRONT_T   = 3.2    # CHOICE  front face (holds the window); thickened +1.0 so the LED screw-post
+                   #         pilots are capped by more opaque wall and stay hidden from the front
 OUT_R     = 3.0    # CHOICE  outer corner radius (matches v1)
 SEG       = 96     # CHOICE  cylinder facets
 # (the charger region AND the skirt are OPEN at the back; the skirt is closed by a separate
@@ -107,7 +109,8 @@ LIP_CHAMFER = 1.2  # CHOICE  ramp so the inward overhang self-supports (front-fa
 # Lower cable/electronics skirt.  Floored by the USB-A pigtail plug's vertical clearance
 # (~15 mm, BP), NOT by the XIAO -- which now lies FLAT on the skirt floor (21x17.8 footprint
 # on the X-Z plane, only ~5.5 mm tall in Y), held by gravity + its wires to the stick.
-SKIRT_H   = 17.0   # CHOICE  interior skirt height below the charger (BP 15-18)
+SKIRT_H   = 41.0   # CHOICE  interior skirt height below the charger; grown from 17 -> 29 -> 41
+                   # (two +12 bumps) to make room for the USB cable/plug off the charger's port
 
 # ======================================================================================
 #  LED stick mount (front pocket) + window  -- CHOICE
@@ -140,13 +143,9 @@ COVER_SCREW_CLR = 3.4  # CHOICE  M3 clearance hole through the cover
 COVER_CSK_D    = 6.0   # CHOICE  countersink on the cover's outer (wall) face -> flush head
 COVER_PILOT_DEPTH = 6.0  # CHOICE  blind M3 pilot depth in each boss
 
-# Top retaining lip: two corner TABS on the body that overlap a half-thickness tongue on the
-# cover's top edge -> the cover top can't pull out (the 2 side screws hold the rest).  Corner
-# tabs (not a full-width lip) keep it to short print overhangs instead of a 44 mm bridge.
-COVER_LIP_REACH  = 6.0   # CHOICE  how far each tab reaches inward from the side wall
-COVER_LIP_Y      = 4.0   # CHOICE  tab depth down from the top (y=0)
-COVER_LIP_FRAC   = 0.5   # CHOICE  outer fraction of the cover thickness the tab/tongue splits at
-COVER_LIP_SLIDE  = 0.4   # CHOICE  extra clearance so the tongue slides under the tab
+# (REMOVED) Top retaining tab/tongue lip: the two body corner tabs + the mating half-thickness
+# tongue on the cover's top edge are gone (user: "not helpful").  The cover is now a plain plate
+# held by its 2 side screws alone.
 
 # Optional USB-C service slot in the skirt bottom wall (default OFF -- first flash is done with
 # the XIAO out of the case; afterwards it's OTA over WiFi).  Turn on if you want cabled access.
@@ -158,8 +157,8 @@ USB_SLOT_H = 7.0
 #  DERIVED  (nothing below is a free choice)
 # ======================================================================================
 # --- charger cavity (with slip fit) ---
-CAV_W = CHG_W + FIT_W          # 43.78  interior width  (BP 43.8)
-CAV_H = CHG_H + FIT_H          # 51.40  interior height (BP 51.4)
+CAV_W = CHG_W + FIT_W          # 45.70  interior width  (MEAS charger + slip fit)
+CAV_H = CHG_H + FIT_H          # 52.20  interior height (MEAS charger + slip fit)
 CAV_D = CHG_D + FIT_D          # 20.72  charger depth   (BP 20.7)
 
 # --- depth stack (Z): back rim -> charger -> head-relief gap -> LED stick -> front wall ---
@@ -215,7 +214,3 @@ COVER_CY = REB_CY
 # two cover screws, mid-skirt on each side; bosses are gusseted out to the side walls
 COVER_SCREW_XY = [(sx * COVER_BOSS_X, -SKIRT_H / 2) for sx in (-1, 1)]
 COVER_PILOT_TOP_Z = COVER_T + COVER_PILOT_DEPTH   # blind pilot top (inside the skirt)
-
-# top retaining lip (derived): tab/tongue split plane + the cover's top edge
-COVER_LIP_T   = COVER_T * COVER_LIP_FRAC          # tab thickness = outer slice of the cover
-COVER_TOP_Y   = COVER_CY + COVER_H / 2            # cover top edge (world Y)

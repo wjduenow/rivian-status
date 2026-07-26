@@ -57,11 +57,9 @@ def build_template():
     for (bx, by) in P.LED_HOLE_XY:
         adds.append(cyl_z(P.STRIP_BOSS_OD / 2, P.LED_PCB_TOP_Z, P.D_IN, bx, by))
         pilots.append(cyl_z(P.SCREW_PILOT / 2, P.LED_PCB_TOP_Z - 0.2, P.PILOT_TOP_Z, bx, by))
-    # D-flatten the bosses flush with the window edge (same as the case) so they clear the slot
-    win_keepout = box_at(P.WIN_W, P.WIN_H, P.D_IN - P.LED_PCB_TOP_Z + 0.4,
-                         P.WIN_CX, P.WIN_CY, (P.LED_PCB_TOP_Z + P.D_IN) / 2)
+    # posts sit outboard of the window now -> complete round bosses (no window-edge clipping)
     t = union([body] + adds)
-    t = difference([t] + pilots + [win_keepout])
+    t = difference([t] + pilots)
     return t
 
 
@@ -72,7 +70,7 @@ if __name__ == "__main__":
     print("template.stl written")
     print("  plate            %.1f (X) x %.1f (Y) x %.1f (Z) mm" %
           (b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]))
-    print("  screw posts X    %.2f  (Y = %.1f, %.1f), hole %.2f off the LED-row centreline" %
-          (P.LED_HOLE_XY[0][0], P.LED_HOLE_XY[0][1], P.LED_HOLE_XY[1][1], P.LED_HOLE_DX))
+    print("  screw posts X    %.2f  (Y = %.1f, %.1f); groove shifted +%.2f, window on its -X edge" %
+          (P.LED_HOLE_XY[0][0], P.LED_HOLE_XY[0][1], P.LED_HOLE_XY[1][1], P.STICK_CX))
     print("  window centre X  %.2f  (W x H = %.2f x %.2f)" % (P.WIN_CX, P.WIN_W, P.WIN_H))
     print("  watertight:", m.is_watertight)

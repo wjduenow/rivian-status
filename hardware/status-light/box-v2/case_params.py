@@ -65,9 +65,11 @@ LED_5050     = 4.75    # MEAS  emitter square
 LED_HOLE_D       = 3.75          # MEAS  hole Ø
 LED_HOLE_OFFS_Y  = [-13.0, 13.0] # MEAS  along the length, from stick centre (26 mm apart --
                                  #       re-confirmed on the template 2026-07-25: 26 mm hole-to-hole)
-LED_HOLE_DX      = 3.77          # MEAS(template 2026-07-25)  hole centre to the LED-row centreline,
-                                 #       across the width (was a rough 4.5; the strip laid on the
-                                 #       template put the hole 3.77 mm off the window centreline)
+LED_HOLE_DX      = 3.77          # MEAS(template 2026-07-25)  hole centre from the BOARD's width
+                                 #       centre (measured with the board centred: hole sat 3.77 mm
+                                 #       off centre).  Posts = STICK_CX + this, so they follow the
+                                 #       groove shift.  NOTE: the emitter row is a separate offset
+                                 #       (toward -X), handled by shifting STICK_CX -- see below.
 LED_HOLE_SIDE    = 1             # CHOICE which X side the holes sit (cosmetic; board is centred)
 
 # ======================================================================================
@@ -185,22 +187,28 @@ OUT_W2 = OUT_W / 2
 CAV_W2 = CAV_W / 2
 IN_R   = OUT_R - WALL
 
-# --- LED stick pose (world): vertical, centred on the charger face.  The emitter row / window
-#     and the stick body all share LED_CX; the two screw holes sit LED_HOLE_DX off the row.
-LED_CX  = 0.0                          # emitter row / window / stick-body centre X (case face)
+# --- LED stick pose (world): vertical.  The emitter row is NOT centred on the board -- it sits
+#     toward the board's -X long edge.  The WINDOW stays centred on the case face (LED_CX); the
+#     GROOVE (pocket) + screw posts are shifted +X so the off-centre emitters land in the window.
+LED_CX  = 0.0                          # emitter row / window centre X (case face)
 LED_CY  = CAV_H / 2                    # centred over the charger height
-STICK_CX = LED_CX                      # stick body / pocket centre (no mount offset)
-# the two mounting holes (world): both on one X side of the stick, ~1/4 and ~3/4 up its length
-LED_HOLE_XY = [(STICK_CX + LED_HOLE_SIDE * LED_HOLE_DX, LED_CY + oy) for oy in LED_HOLE_OFFS_Y]
 
 # window over the emitter run (vertical): tall in Y, narrow in X; stays on the emitter row (LED_CX)
 WIN_W = LED_5050 + 2 * WIN_MARGIN                       # along X
 WIN_H = LED_LIT_SPAN + LED_5050 + 2 * WIN_MARGIN        # along Y
 WIN_CX, WIN_CY = LED_CX, LED_CY
 
-# stick pocket footprint (locates the stick in X/Y), centred on the shifted mount
+# stick pocket / groove footprint (fits the whole board; locates it in X/Y)
 POCKET_W = LED_W + 2 * POCKET_FIT     # X
 POCKET_H = LED_L + 2 * POCKET_FIT     # Y
+
+# Groove shifted so its -X edge meets the window's -X edge -- the whole extra groove width then
+# sits on the +X side of the window.  With the emitters toward the board's -X edge this centres
+# them in the window, and the posts move outboard far enough for COMPLETE (un-clipped) bosses.
+# (Measured/verified on the real strip: the board mounts holes-aligned but LEDs sat off-centre.)
+STICK_CX = (WIN_CX - WIN_W / 2) + POCKET_W / 2          # stick body / pocket / post centre X
+# the two mounting holes (world): LED_HOLE_DX off the BOARD centre, ~1/4 and ~3/4 up the length
+LED_HOLE_XY = [(STICK_CX + LED_HOLE_SIDE * LED_HOLE_DX, LED_CY + oy) for oy in LED_HOLE_OFFS_Y]
 
 # --- XIAO pose in the skirt (world): lying FLAT on the floor, PCB in the X-Z plane ---
 XIAO_CX = 0.0

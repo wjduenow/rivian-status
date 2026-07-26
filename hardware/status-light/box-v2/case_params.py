@@ -63,8 +63,11 @@ LED_5050     = 4.75    # MEAS  emitter square
 # Mounting holes (MEAS, from ../box).  Two holes ~1/4 and ~3/4 along the stick length (world
 # Y here) and offset off the LED row toward ONE long edge (world X here).
 LED_HOLE_D       = 3.75          # MEAS  hole Ø
-LED_HOLE_OFFS_Y  = [-13.0, 13.0] # MEAS  along the length, from stick centre (26 mm apart)
-LED_HOLE_DX      = 4.5           # MEAS  offset off the LED row, across the width
+LED_HOLE_OFFS_Y  = [-13.0, 13.0] # MEAS  along the length, from stick centre (26 mm apart --
+                                 #       re-confirmed on the template 2026-07-25: 26 mm hole-to-hole)
+LED_HOLE_DX      = 3.77          # MEAS(template 2026-07-25)  hole centre to the LED-row centreline,
+                                 #       across the width (was a rough 4.5; the strip laid on the
+                                 #       template put the hole 3.77 mm off the window centreline)
 LED_HOLE_SIDE    = 1             # CHOICE which X side the holes sit (cosmetic; board is centred)
 
 # ======================================================================================
@@ -122,6 +125,10 @@ POCKET_FIT     = 0.35   # CHOICE  per-side slack around the stick in its pocket
 WIN_MARGIN     = 0.6    # CHOICE  window overhang past the emitter extent, per edge
 DIFFUSER_REBATE_T = 0.8 # CHOICE  outer rebate depth for a stick-on diffusion film
 DIFFUSER_REBATE_W = 1.2 # CHOICE  outer rebate lip width
+# Alignment history (2026-07-25): vertical (Y) was verified good -- the window stays centred on
+# the charger height, stick centred on it.  Horizontal (X) was NOT a mount shift after all: the
+# stick stays centred on the window, and the real fix was the measured hole-to-LED-row distance
+# LED_HOLE_DX = 3.77 (above).  No board-mount offset is applied (STICK_CX == LED_CX).
 
 # ======================================================================================
 #  XIAO skirt bay  -- the XIAO just RESTS on the floor (no standoffs/ribs) -- CHOICE
@@ -178,18 +185,20 @@ OUT_W2 = OUT_W / 2
 CAV_W2 = CAV_W / 2
 IN_R   = OUT_R - WALL
 
-# --- LED stick pose (world): vertical, centred on the charger face ---
-LED_CX = 0.0
-LED_CY = CAV_H / 2             # centred over the charger height
-# the two mounting holes (world): both on one X side, ~1/4 and ~3/4 up the stick
-LED_HOLE_XY = [(LED_CX + LED_HOLE_SIDE * LED_HOLE_DX, LED_CY + oy) for oy in LED_HOLE_OFFS_Y]
+# --- LED stick pose (world): vertical, centred on the charger face.  The emitter row / window
+#     and the stick body all share LED_CX; the two screw holes sit LED_HOLE_DX off the row.
+LED_CX  = 0.0                          # emitter row / window / stick-body centre X (case face)
+LED_CY  = CAV_H / 2                    # centred over the charger height
+STICK_CX = LED_CX                      # stick body / pocket centre (no mount offset)
+# the two mounting holes (world): both on one X side of the stick, ~1/4 and ~3/4 up its length
+LED_HOLE_XY = [(STICK_CX + LED_HOLE_SIDE * LED_HOLE_DX, LED_CY + oy) for oy in LED_HOLE_OFFS_Y]
 
-# window over the emitter run (vertical): tall in Y, narrow in X
+# window over the emitter run (vertical): tall in Y, narrow in X; stays on the emitter row (LED_CX)
 WIN_W = LED_5050 + 2 * WIN_MARGIN                       # along X
 WIN_H = LED_LIT_SPAN + LED_5050 + 2 * WIN_MARGIN        # along Y
 WIN_CX, WIN_CY = LED_CX, LED_CY
 
-# stick pocket footprint (locates the stick in X/Y)
+# stick pocket footprint (locates the stick in X/Y), centred on the shifted mount
 POCKET_W = LED_W + 2 * POCKET_FIT     # X
 POCKET_H = LED_L + 2 * POCKET_FIT     # Y
 

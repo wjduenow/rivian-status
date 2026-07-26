@@ -26,7 +26,7 @@ CY_MID = (P.YMAX + P.YMIN) / 2
 charger = trimesh.creation.box(extents=(P.CHG_W, P.CHG_H, P.CHG_D))
 charger.apply_translation([0, P.CHG_H / 2, P.CHG_D / 2])
 stick = trimesh.creation.box(extents=(P.LED_W, P.LED_L, P.LED_PCB_T))
-stick.apply_translation([P.LED_CX, P.LED_CY, P.LED_BACK_Z + P.LED_PCB_T / 2])
+stick.apply_translation([P.STICK_CX, P.LED_CY, P.LED_BACK_Z + P.LED_PCB_T / 2])
 xiao = trimesh.creation.box(extents=(P.PCB_L, P.PCB_T, P.PCB_W))   # lying FLAT on the floor
 xiao.apply_translation([P.XIAO_CX, P.XIAO_CY, P.XIAO_CZ])
 
@@ -67,8 +67,8 @@ xh = P.PCB_T + P.COMP_Z_ABOVE_PCB
 a.add_patch(Rectangle((-P.PCB_L / 2, P.XIAO_FLOOR_Y), P.PCB_L, xh, fc=C_XIAO, alpha=0.5))
 a.add_patch(Rectangle((P.WIN_CX - P.WIN_W / 2, P.WIN_CY - P.WIN_H / 2), P.WIN_W, P.WIN_H, fc='#20242a', ec='#444'))
 pitch = P.LED_LIT_SPAN / (P.LED_COUNT - 1)
-for i in range(P.LED_COUNT):
-    y = P.LED_CY - P.LED_LIT_SPAN / 2 + i * pitch
+for i in range(P.LED_COUNT):                                   # emitters on the row (LED_CX),
+    y = P.LED_CY - P.LED_LIT_SPAN / 2 + i * pitch             # centred in the window
     a.add_patch(Circle((P.LED_CX, y), 2.2, color=['#c0424a', '#e0b878', '#2a6b32'][i % 3]))
 for (hx, hy) in P.LED_HOLE_XY:                                          # hidden stick bosses
     a.add_patch(Circle((hx, hy), P.STRIP_BOSS_OD / 2, fc='none', ec='#b03050', lw=1.5))
@@ -106,8 +106,8 @@ a.add_patch(Rectangle((-P.OUT_W2, P.D_IN), P.OUT_W, P.FRONT_T, color=C_CASE))   
 for sx in (-1, 1):
     a.add_patch(Rectangle((sx * P.CAV_W / 2 - (P.WALL if sx > 0 else 0), 0), P.WALL, P.OUT_D, color=C_CASE))
 a.add_patch(Rectangle((-P.CHG_W / 2, 0), P.CHG_W, P.CHG_D, fc=C_CHG, alpha=0.5, ec=C_CHG))
-a.add_patch(Rectangle((-P.LED_W / 2, P.LED_BACK_Z), P.LED_W, P.LED_PCB_T, color=C_LED))
-a.add_patch(Rectangle((-P.LED_5050 / 2, P.LED_PCB_TOP_Z), P.LED_5050, P.LED_BODY_H, color='#e0b878'))
+a.add_patch(Rectangle((P.STICK_CX - P.LED_W / 2, P.LED_BACK_Z), P.LED_W, P.LED_PCB_T, color=C_LED))
+a.add_patch(Rectangle((P.LED_CX - P.LED_5050 / 2, P.LED_PCB_TOP_Z), P.LED_5050, P.LED_BODY_H, color='#e0b878'))
 a.plot([-P.WIN_W / 2, P.WIN_W / 2], [P.OUT_D, P.OUT_D], 'w-', lw=3)
 a.annotate("charger", (0, P.CHG_D / 2), ha='center', va='center', fontsize=8, color='w')
 a.annotate("stick", (P.LED_W / 2 + 1, P.LED_BACK_Z + 1), ha='left', fontsize=7, color=C_LED)

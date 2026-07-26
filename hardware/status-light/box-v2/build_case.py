@@ -61,7 +61,7 @@ def build_case():
 
     # -- LED-stick front pocket (charger front -> front wall; opens back into the cavity)
     pk0 = P.CAV_D - 0.3                       # slight overlap into the charger cavity
-    subs.append(box_at(P.POCKET_W, P.POCKET_H, P.D_IN - pk0, 0, P.LED_CY, (pk0 + P.D_IN) / 2))
+    subs.append(box_at(P.POCKET_W, P.POCKET_H, P.D_IN - pk0, P.STICK_CX, P.LED_CY, (pk0 + P.D_IN) / 2))
 
     # -- skirt bay (below the charger; OPEN at the back, shares the front wall) ----------
     subs.append(prism(rrect(P.CAV_W, P.SKIRT_H, P.IN_R), -1.0, P.D_IN + 0.01, 0, -P.SKIRT_H / 2))
@@ -81,10 +81,14 @@ def build_case():
     body = difference([body] + subs)
 
     # -- rear snap lip (inward flange around the charger opening at the back rim) --------
+    #    Top + two sides only: the BOTTOM run (along y=0) is removed -- it sat right above the
+    #    skirt cover as a thin strip across the back and did no retaining there (the charger's
+    #    bottom is at the skirt junction).  Three-sided snap still holds the charger.
     lip = difference([
         prism(rrect(P.CAV_W, P.CAV_H, P.IN_R), 0, P.LIP_H, 0, P.CAV_H / 2),
         prism(rrect(P.CAV_W - 2 * P.LIP_IN, P.CAV_H - 2 * P.LIP_IN, max(0.5, P.IN_R - P.LIP_IN)),
               -0.5, P.LIP_H + 0.5, 0, P.CAV_H / 2),
+        box_at(P.CAV_W + 2, P.LIP_IN + 2, P.LIP_H + 2, 0, 0, P.LIP_H / 2),   # drop the bottom run
     ])
     adds.append(lip)
 
@@ -105,8 +109,13 @@ def build_case():
                            (cx + wall_in) / 2, cy, P.COVER_T + P.COVER_BOSS_H / 2))
         strip_pilots.append(cyl_z(P.SCREW_PILOT / 2, P.COVER_T - 0.1, P.COVER_PILOT_TOP_Z, cx, cy))
 
+    # D-flatten the LED-stick bosses flush with the window edge: clip any boss material inside
+    # the window footprint so the posts sit fully OUTBOARD of the slot (at LED_HOLE_DX=3.77 a
+    # round Ø5 boss would otherwise graze the window edge and the two nearest LEDs).
+    win_keepout = box_at(P.WIN_W, P.WIN_H, P.D_IN - P.LED_PCB_TOP_Z + 0.4,
+                         P.WIN_CX, P.WIN_CY, (P.LED_PCB_TOP_Z + P.D_IN) / 2)
     case = union([body] + adds)
-    case = difference([case] + strip_pilots)
+    case = difference([case] + strip_pilots + [win_keepout])
     return case
 
 
@@ -123,8 +132,8 @@ def check_clearances():
     assert P.LED_BACK_Z - P.STRIP_SCREW_HEAD_H > P.CAV_D, "screw heads foul the charger face"
     assert P.PILOT_TOP_Z < P.OUT_D, "boss pilot breaches the front face"
     for (hx, hy) in P.LED_HOLE_XY:      # each hole lands on the PCB, clear of the window
-        assert abs(hx - P.LED_CX) <= P.LED_W / 2 and abs(hy - P.LED_CY) <= P.LED_L / 2, "hole off the stick"
-        assert abs(hx) > P.WIN_W / 2, "screw boss overlaps the window"
+        assert abs(hx - P.STICK_CX) <= P.LED_W / 2 and abs(hy - P.LED_CY) <= P.LED_L / 2, "hole off the stick"
+        assert hx - P.WIN_W / 2 > P.WIN_CX, "screw boss overlaps the window"
     # window shows every emitter but stays inside the stick body
     assert P.WIN_H >= P.LED_LIT_SPAN + P.LED_5050, "window too short for all emitters"
     assert P.WIN_H < P.LED_L and P.WIN_W < P.LED_W, "window bigger than the stick"

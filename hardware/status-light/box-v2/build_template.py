@@ -57,9 +57,11 @@ def build_template():
     for (bx, by) in P.LED_HOLE_XY:
         adds.append(cyl_z(P.STRIP_BOSS_OD / 2, P.LED_PCB_TOP_Z, P.D_IN, bx, by))
         pilots.append(cyl_z(P.SCREW_PILOT / 2, P.LED_PCB_TOP_Z - 0.2, P.PILOT_TOP_Z, bx, by))
-    # posts sit outboard of the window now -> complete round bosses (no window-edge clipping)
+    # D-flatten the bosses at the window edge (posts sit close to the window with the LEDs centred)
+    win_keepout = box_at(P.WIN_W, P.WIN_H, P.D_IN - P.LED_PCB_TOP_Z + 0.4,
+                         P.WIN_CX, P.WIN_CY, (P.LED_PCB_TOP_Z + P.D_IN) / 2)
     t = union([body] + adds)
-    t = difference([t] + pilots)
+    t = difference([t] + pilots + [win_keepout])
     return t
 
 

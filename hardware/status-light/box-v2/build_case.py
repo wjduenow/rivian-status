@@ -109,10 +109,14 @@ def build_case():
                            (cx + wall_in) / 2, cy, P.COVER_T + P.COVER_BOSS_H / 2))
         strip_pilots.append(cyl_z(P.SCREW_PILOT / 2, P.COVER_T - 0.1, P.COVER_PILOT_TOP_Z, cx, cy))
 
-    # The groove shift moves the posts outboard of the window, so the bosses are COMPLETE round
-    # nubs now -- no window-edge clipping needed (was a D-flatten when the posts sat at 3.77).
+    # With the LEDs centred the posts sit close to the window, so a full Ø5 boss overlaps the slot
+    # by ~0.8 mm.  D-flatten the bosses at the window edge: clip boss material inside the window
+    # footprint so nothing pokes into the slot.  The screw PILOT stays fully outboard of the
+    # window (asserted), so the flat only trims the boss rim -- thread engagement is unaffected.
+    win_keepout = box_at(P.WIN_W, P.WIN_H, P.D_IN - P.LED_PCB_TOP_Z + 0.4,
+                         P.WIN_CX, P.WIN_CY, (P.LED_PCB_TOP_Z + P.D_IN) / 2)
     case = union([body] + adds)
-    case = difference([case] + strip_pilots)
+    case = difference([case] + strip_pilots + [win_keepout])
     return case
 
 
@@ -130,8 +134,9 @@ def check_clearances():
     assert P.PILOT_TOP_Z < P.OUT_D, "boss pilot breaches the front face"
     for (hx, hy) in P.LED_HOLE_XY:      # each hole lands on the PCB, clear of the window
         assert abs(hx - P.STICK_CX) <= P.LED_W / 2 and abs(hy - P.LED_CY) <= P.LED_L / 2, "hole off the stick"
-        # boss stays fully outboard of the window -> a COMPLETE (un-clipped) round boss
-        assert abs(hx - P.WIN_CX) - P.STRIP_BOSS_OD / 2 > P.WIN_W / 2, "screw boss overlaps the window"
+        # the screw PILOT must stay fully outboard of the window so the D-flatten only trims the
+        # boss rim and never breaches the thread (the boss itself may overlap and get flattened)
+        assert abs(hx - P.WIN_CX) - P.SCREW_PILOT / 2 > P.WIN_W / 2, "pilot breaches the window edge"
     # window shows every emitter but stays inside the stick body
     assert P.WIN_H >= P.LED_LIT_SPAN + P.LED_5050, "window too short for all emitters"
     assert P.WIN_H < P.LED_L and P.WIN_W < P.LED_W, "window bigger than the stick"

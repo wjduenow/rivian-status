@@ -13,7 +13,7 @@ TWx = (b[0][0], b[1][0]); TWy = (b[0][1], b[1][1])
 
 fig, (a0, a1) = plt.subplots(1, 2, figsize=(11, 6))
 fig.suptitle("v2 LED-mount alignment template  (%.0f x %.0f x %.1f mm)  "
-             "window centred, groove +%.2f, posts at %.2f (complete)"
+             "window centred, groove +%.2f, posts at %.2f (D-flat at window edge)"
              % (b[1][0]-b[0][0], b[1][1]-b[0][1], b[1][2]-b[0][2], P.STICK_CX, P.LED_HOLE_XY[0][0]),
              weight='bold')
 

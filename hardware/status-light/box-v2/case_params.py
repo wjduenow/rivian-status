@@ -71,11 +71,6 @@ LED_HOLE_DX      = 3.77          # MEAS(template 2026-07-25)  hole centre from t
                                  #       groove shift.  NOTE: the emitter row is a separate offset
                                  #       (toward -X), handled by shifting STICK_CX -- see below.
 LED_HOLE_SIDE    = 1             # CHOICE which X side the holes sit (cosmetic; board is centred)
-# Emitter row is NOT on the board's width centre -- it sits toward the -X long edge.  MEASURED on
-# the mounted unit 2026-07-25: with the groove edge-aligned the emitters landed 1.5 mm right of
-# the window, so the row is 0.875 mm toward -X of the board centre.  The groove/posts shift by
-# -LED_EMIT_DX so the emitters land on the window (LED_CX).  (+X = toward the hole side.)
-LED_EMIT_DX      = -0.875        # MEAS(2026-07-25)  emitter-row centre vs the board width centre
 
 # ======================================================================================
 #  Fasteners  -- M3 self-tapping, driven from the OPEN BACK into front-wall bosses (CHOICE)
@@ -207,12 +202,11 @@ WIN_CX, WIN_CY = LED_CX, LED_CY
 POCKET_W = LED_W + 2 * POCKET_FIT     # X
 POCKET_H = LED_L + 2 * POCKET_FIT     # Y
 
-# Shift the groove/posts so the (off-centre) emitter row lands on the window centre (LED_CX):
-#   emitter world = STICK_CX + LED_EMIT_DX == LED_CX  ->  STICK_CX = LED_CX - LED_EMIT_DX.
-# At this centred position the post (STICK_CX + LED_HOLE_DX) sits close enough to the window that
-# a full Ø5 boss overlaps it by ~0.8 mm, so the boss is D-flattened at the window edge in
-# build_case (the screw pilot still stays fully outboard of the window -- asserted below).
-STICK_CX = LED_CX - LED_EMIT_DX                          # stick body / pocket / post centre X
+# Groove shifted so its -X edge meets the window's -X edge -- the whole extra groove width then
+# sits on the +X side of the window.  With the emitters toward the board's -X edge this centres
+# them in the window, and the posts move outboard far enough for COMPLETE (un-clipped) bosses.
+# (Measured/verified on the real strip: the board mounts holes-aligned but LEDs sat off-centre.)
+STICK_CX = (WIN_CX - WIN_W / 2) + POCKET_W / 2          # stick body / pocket / post centre X
 # the two mounting holes (world): LED_HOLE_DX off the BOARD centre, ~1/4 and ~3/4 up the length
 LED_HOLE_XY = [(STICK_CX + LED_HOLE_SIDE * LED_HOLE_DX, LED_CY + oy) for oy in LED_HOLE_OFFS_Y]
 

@@ -57,6 +57,12 @@ def build_template():
     for (bx, by) in P.LED_HOLE_XY:
         adds.append(cyl_z(P.STRIP_BOSS_OD / 2, P.LED_PCB_TOP_Z, P.D_IN, bx, by))
         pilots.append(cyl_z(P.SCREW_PILOT / 2, P.LED_PCB_TOP_Z - 0.2, P.PILOT_TOP_Z, bx, by))
+    # level-support ledge on the side opposite the posts (same as the case), back face at
+    # LED_PCB_TOP_Z, so the strip rests flat instead of tilting when screwed to the bosses
+    rail_wall = P.STICK_CX - P.LED_HOLE_SIDE * P.POCKET_W / 2
+    rail_edge = P.WIN_CX - P.LED_HOLE_SIDE * P.WIN_W / 2
+    adds.append(box_at(abs(rail_edge - rail_wall), P.LED_L, P.D_IN - P.LED_PCB_TOP_Z,
+                       (rail_wall + rail_edge) / 2, P.LED_CY, (P.LED_PCB_TOP_Z + P.D_IN) / 2))
     # posts sit outboard of the window now -> complete round bosses (no window-edge clipping)
     t = union([body] + adds)
     t = difference([t] + pilots)

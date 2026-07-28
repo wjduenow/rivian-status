@@ -202,11 +202,12 @@ WIN_CX, WIN_CY = LED_CX, LED_CY
 POCKET_W = LED_W + 2 * POCKET_FIT     # X
 POCKET_H = LED_L + 2 * POCKET_FIT     # Y
 
-# Groove shifted so its -X edge meets the window's -X edge -- the whole extra groove width then
-# sits on the +X side of the window.  With the emitters toward the board's -X edge this centres
-# them in the window, and the posts move outboard far enough for COMPLETE (un-clipped) bosses.
-# (Measured/verified on the real strip: the board mounts holes-aligned but LEDs sat off-centre.)
-STICK_CX = (WIN_CX - WIN_W / 2) + POCKET_W / 2          # stick body / pocket / post centre X
+# Groove shifted so its -X edge meets the window's -X edge, then trimmed 0.75 mm LEFT (-X):
+# at the pure edge-aligned spot the emitters sat 1.5 mm right of the window, so a 0.75 mm left
+# nudge halves that (user's call).  Posts follow to x=5.395 -- the Ø5 boss still clears the
+# window bar a <0.1 mm graze (below FDM resolution), so the bosses stay COMPLETE (no D-flatten).
+STICK_TRIM_X = -0.75                                    # CHOICE(2026-07-25) fine left/right trim
+STICK_CX = (WIN_CX - WIN_W / 2) + POCKET_W / 2 + STICK_TRIM_X   # stick body / pocket / post centre X
 # the two mounting holes (world): LED_HOLE_DX off the BOARD centre, ~1/4 and ~3/4 up the length
 LED_HOLE_XY = [(STICK_CX + LED_HOLE_SIDE * LED_HOLE_DX, LED_CY + oy) for oy in LED_HOLE_OFFS_Y]
 

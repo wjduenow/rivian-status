@@ -227,6 +227,15 @@ set **Enclosure = Box (v1)** and **plug = Bottom** on the config page and it rea
   the window slot with a strip of diffusion film.
 
 ### v2 — wall-charger slip case (`hardware/status-light/box-v2/`)
+
+| Front (mounted, live) | Side (profile) |
+|:---:|:---:|
+| [![The v2 enclosure, wall-mounted and running](docs/enclosure-v2-front.jpg)](docs/enclosure-v2-front.jpg) | [![The v2 enclosure in profile](docs/enclosure-v2-side.jpg)](docs/enclosure-v2-side.jpg) |
+
+*A built v2 unit press-fit over the wall charger, live — the LED meter shows through the front
+window. Right: the side profile, protruding ~29 mm from the wall, with the charger's AC prongs
+exiting the open back straight into the outlet.*
+
 A one-piece shell that **press-fits over a Nekmit Ultra-Thin flat USB wall charger** — the
 charger is the mechanical *and* power anchor. It plugs into the wall, its AC prongs exit the
 **open back**, and the case snaps on over it. The LED stick shows **out the front**; the XIAO

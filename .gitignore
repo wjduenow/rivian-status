@@ -11,3 +11,6 @@ include/secrets.h
 # hardware/ — Python CAD toolchain byproducts (STLs + previews ARE committed)
 __pycache__/
 *.pyc
+
+# WSL/Windows "downloaded from the internet" NTFS metadata streams
+*:Zone.Identifier
